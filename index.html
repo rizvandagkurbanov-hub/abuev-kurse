@@ -25,7 +25,8 @@ input:focus{border-color:var(--accent)}
 .tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
 .tab{padding:10px 0;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-size:15px;font-weight:600;cursor:pointer}
 .tab.on{background:var(--accent);border-color:var(--accent);color:#fff}
-.res{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid var(--line)}
+.res{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid var(--line);cursor:pointer;transition:background 0.2s;}
+.res:active{background:var(--accent-soft);}
 .res:last-child{border-bottom:0}
 .res.src{opacity:.55}
 .code{font-weight:700;font-size:16px}
@@ -38,6 +39,8 @@ input:focus{border-color:var(--accent)}
 .btn{flex:1;padding:10px;border-radius:12px;border:1px solid var(--line);background:var(--accent-soft);color:var(--accent);font-weight:600;cursor:pointer;font-size:14px}
 .note{color:var(--muted);font-size:12px;margin:10px 0 0}
 .h2{font-size:15px;font-weight:700;margin:0 0 10px}
+#toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--ok);color:#fff;padding:10px 20px;border-radius:20px;font-weight:600;font-size:14px;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:1000;}
+#toast.show{opacity:1;}
 </style>
 </head>
 <body>
@@ -62,6 +65,7 @@ input:focus{border-color:var(--accent)}
     <p class="note" id="st">Загружаю курс…</p>
   </div>
 </main>
+<div id="toast">Скопировано!</div>
 
 <script>
 (function(){
@@ -85,10 +89,34 @@ input:focus{border-color:var(--accent)}
   var out=document.getElementById("out");
   var rbox=document.getElementById("rates");
   var st=document.getElementById("st");
+  var toast=document.getElementById("toast");
 
   function num(str){var v=parseFloat(String(str).replace(/\s/g,"").replace(",","."));return isFinite(v)?v:0;}
   function fmt(v,d){return v.toLocaleString("ru-RU",{minimumFractionDigits:d,maximumFractionDigits:d});}
   function conv(a,f,t){return a*rates[f]/rates[t];}
+
+  // Всплывающее уведомление о копировании
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add("show");
+    setTimeout(function(){ toast.classList.remove("show"); }, 2000);
+  }
+
+  function copyText(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(function(){
+        showToast("Скопировано: " + text);
+      }).catch(function(){ showToast("Ошибка копирования"); });
+    } else {
+      // Резервный метод для старых браузеров
+      var t = document.createElement("textarea");
+      t.value = text;
+      document.body.appendChild(t);
+      t.select();
+      try { document.execCommand("copy"); showToast("Скопировано: " + text); } catch(e) { showToast("Ошибка"); }
+      document.body.removeChild(t);
+    }
+  }
 
   function renderTabs(){
     tabs.innerHTML="";
@@ -108,6 +136,15 @@ input:focus{border-color:var(--accent)}
       var one=conv(1,from,x.c);
       var d=document.createElement("div");
       d.className="res"+(x.c===from?" src":"");
+      
+      // Добавляем обработчик клика для копирования суммы
+      d.onclick = function() {
+        if (x.c !== from) {
+          var formattedValue = fmt(v, 2);
+          copyText(formattedValue);
+        }
+      };
+
       d.innerHTML='<div><div class="code">'+x.s+" "+x.c+'</div><div class="name">'+x.n+'</div></div>'+
         '<div><div class="val">'+fmt(v,2)+'</div>'+
         (x.c===from?'':'<div class="one">1 '+from+" = "+fmt(one,one<0.1?6:4)+" "+x.c+'</div>')+'</div>';
@@ -121,7 +158,9 @@ input:focus{border-color:var(--accent)}
       var w=document.createElement("div");
       var l=document.createElement("label");l.textContent="1 "+x.c+" в рублях";
       var i=document.createElement("input");
-      i.type="text";i.inputMode="decimal";i.value=String(rates[x.c]).replace(".",",");
+      i.type="text";i.inputMode="decimal";
+      // Округляем до 4 знаков для красоты
+      i.value=String(rates[x.c].toFixed(4)).replace(".",",");
       i.oninput=function(){var v=num(i.value);if(v>0){rates[x.c]=v;save();renderOut();}};
       w.appendChild(l);w.appendChild(i);rbox.appendChild(w);
     });
@@ -130,8 +169,17 @@ input:focus{border-color:var(--accent)}
 
   var CODES=["USD","EUR","AED","JPY","TRY","CNY"];
   
+  // Функция запроса с таймаутом в 3 секунды
+  function fetchWithTimeout(url, timeout) {
+    timeout = timeout || 3000;
+    return Promise.race([
+      fetch(url, {cache: "no-store"}),
+      new Promise(function(_, reject) { setTimeout(function() { reject(new Error("timeout")); }, timeout); })
+    ]);
+  }
+
   function fromMarket(){
-    return fetch("https://open.er-api.com/v6/latest/USD",{cache:"no-store"})
+    return fetchWithTimeout("https://open.er-api.com/v6/latest/USD")
       .then(function(r){if(!r.ok)throw new Error("http");return r.json();})
       .then(function(j){
         var R=j.rates;
@@ -140,19 +188,10 @@ input:focus{border-color:var(--accent)}
         return "Рыночный курс (Exchange Rate API), обновлён "+new Date(j.time_last_update_utc).toLocaleString("ru-RU");
       });
   }
-  
-  function fromCbr(){
-    return fetch("https://www.cbr-xml-daily.ru/daily_json.js",{cache:"no-store"})
-      .then(function(r){if(!r.ok)throw new Error("http");return r.json();})
-      .then(function(j){
-        CODES.forEach(function(k){var v=j.Valute[k];if(v&&v.Value>0)rates[k]=v.Value/v.Nominal;});
-        return "Курс ЦБ РФ на "+new Date(j.Date).toLocaleDateString("ru-RU");
-      });
-  }
 
-  // Резервный источник (работает без VPN)
+  // Резервный источник (не блокируется в РФ, стоит вторым в очереди)
   function fromBackup(){
-    return fetch("https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json",{cache:"no-store"})
+    return fetchWithTimeout("https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json")
       .then(function(r){if(!r.ok)throw new Error("http");return r.json();})
       .then(function(j){
         var R = j.usd;
@@ -166,16 +205,25 @@ input:focus{border-color:var(--accent)}
         return "Резервный курс (CDN), обновлён " + new Date().toLocaleString("ru-RU");
       });
   }
+  
+  function fromCbr(){
+    return fetchWithTimeout("https://www.cbr-xml-daily.ru/daily_json.js")
+      .then(function(r){if(!r.ok)throw new Error("http");return r.json();})
+      .then(function(j){
+        CODES.forEach(function(k){var v=j.Valute[k];if(v&&v.Value>0)rates[k]=v.Value/v.Nominal;});
+        return "Курс ЦБ РФ на "+new Date(j.Date).toLocaleDateString("ru-RU");
+      });
+  }
 
   function load(){
     renderRates();
     renderOut();
     st.textContent = "Обновляю курсы…";
 
-    // Пробуем основной источник, если ошибка — ЦБ, если и там ошибка — резервный CDN
+    // Основной -> Резервный (чтобы быстро обходило блокировки) -> ЦБ
     fromMarket()
-      .catch(fromCbr)
       .catch(fromBackup)
+      .catch(fromCbr)
       .then(function(label){
         save();renderRates();renderOut();
         st.textContent = label + ". Свой курс можно ввести вручную.";
