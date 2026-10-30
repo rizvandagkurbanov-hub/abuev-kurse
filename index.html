@@ -36,11 +36,16 @@ input:focus{border-color:var(--accent)}
 .rates{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .rates input{font-size:17px;padding:8px 10px}
 .row{display:flex;gap:8px;margin-top:12px}
-.btn{flex:1;padding:10px;border-radius:12px;border:1px solid var(--line);background:var(--accent-soft);color:var(--accent);font-weight:600;cursor:pointer;font-size:14px}
-.note{color:var(--muted);font-size:12px;margin:10px 0 0}
+.btn{flex:1;padding:10px;border-radius:12px;border:1px solid var(--line);background:var(--accent-soft);color:var(--accent);font-weight:600;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;gap:8px;}
+.btn:disabled{opacity:0.7;cursor:wait;}
+.note{color:var(--muted);font-size:12px;margin:10px 0 0;min-height:16px;}
 .h2{font-size:15px;font-weight:700;margin:0 0 10px}
 #toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--ok);color:#fff;padding:10px 20px;border-radius:20px;font-weight:600;font-size:14px;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:1000;}
 #toast.show{opacity:1;}
+
+/* Анимация загрузки (спиннер) */
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(59, 91, 219, 0.3);border-radius:50%;border-top-color:var(--accent);animation:spin 0.8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
 </style>
 </head>
 <body>
@@ -60,7 +65,7 @@ input:focus{border-color:var(--accent)}
     <p class="h2">Курсы к рублю</p>
     <div class="rates" id="rates"></div>
     <div class="row">
-      <button class="btn" id="reset">Обновить курс</button>
+      <button class="btn" id="reset"><span id="btn-icon"></span><span id="btn-text">Обновить курс</span></button>
     </div>
     <p class="note" id="st">Загружаю курс…</p>
   </div>
@@ -90,12 +95,14 @@ input:focus{border-color:var(--accent)}
   var rbox=document.getElementById("rates");
   var st=document.getElementById("st");
   var toast=document.getElementById("toast");
+  var btn=document.getElementById("reset");
+  var btnIcon=document.getElementById("btn-icon");
+  var btnText=document.getElementById("btn-text");
 
   function num(str){var v=parseFloat(String(str).replace(/\s/g,"").replace(",","."));return isFinite(v)?v:0;}
   function fmt(v,d){return v.toLocaleString("ru-RU",{minimumFractionDigits:d,maximumFractionDigits:d});}
   function conv(a,f,t){return a*rates[f]/rates[t];}
 
-  // Всплывающее уведомление о копировании
   function showToast(msg) {
     toast.textContent = msg;
     toast.classList.add("show");
@@ -108,7 +115,6 @@ input:focus{border-color:var(--accent)}
         showToast("Скопировано: " + text);
       }).catch(function(){ showToast("Ошибка копирования"); });
     } else {
-      // Резервный метод для старых браузеров
       var t = document.createElement("textarea");
       t.value = text;
       document.body.appendChild(t);
@@ -137,11 +143,9 @@ input:focus{border-color:var(--accent)}
       var d=document.createElement("div");
       d.className="res"+(x.c===from?" src":"");
       
-      // Добавляем обработчик клика для копирования суммы
       d.onclick = function() {
         if (x.c !== from) {
-          var formattedValue = fmt(v, 2);
-          copyText(formattedValue);
+          copyText(fmt(v, 2));
         }
       };
 
@@ -159,8 +163,10 @@ input:focus{border-color:var(--accent)}
       var l=document.createElement("label");l.textContent="1 "+x.c+" в рублях";
       var i=document.createElement("input");
       i.type="text";i.inputMode="decimal";
-      // Округляем до 4 знаков для красоты
+      
+      // Округляем до 4 знаков для аккуратного отображения
       i.value=String(rates[x.c].toFixed(4)).replace(".",",");
+      
       i.oninput=function(){var v=num(i.value);if(v>0){rates[x.c]=v;save();renderOut();}};
       w.appendChild(l);w.appendChild(i);rbox.appendChild(w);
     });
@@ -169,9 +175,9 @@ input:focus{border-color:var(--accent)}
 
   var CODES=["USD","EUR","AED","JPY","TRY","CNY"];
   
-  // Функция запроса с таймаутом в 3 секунды
+  // Таймаут 2.5 секунды, чтобы не ждать блокировку
   function fetchWithTimeout(url, timeout) {
-    timeout = timeout || 3000;
+    timeout = timeout || 2500; 
     return Promise.race([
       fetch(url, {cache: "no-store"}),
       new Promise(function(_, reject) { setTimeout(function() { reject(new Error("timeout")); }, timeout); })
@@ -185,11 +191,10 @@ input:focus{border-color:var(--accent)}
         var R=j.rates;
         if(j.result!=="success"||!(R&&R.RUB>0))throw new Error("data");
         CODES.forEach(function(k){if(R[k]>0)rates[k]=R.RUB/R[k];});
-        return "Рыночный курс (Exchange Rate API), обновлён "+new Date(j.time_last_update_utc).toLocaleString("ru-RU");
+        return "Рыночный курс";
       });
   }
-
-  // Резервный источник (не блокируется в РФ, стоит вторым в очереди)
+  
   function fromBackup(){
     return fetchWithTimeout("https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json")
       .then(function(r){if(!r.ok)throw new Error("http");return r.json();})
@@ -202,38 +207,48 @@ input:focus{border-color:var(--accent)}
         rates.JPY = R.rub / R.jpy;
         rates.TRY = R.rub / R.try;
         rates.CNY = R.rub / R.cny;
-        return "Резервный курс (CDN), обновлён " + new Date().toLocaleString("ru-RU");
+        return "Резервный курс (CDN)";
       });
   }
-  
+
   function fromCbr(){
     return fetchWithTimeout("https://www.cbr-xml-daily.ru/daily_json.js")
       .then(function(r){if(!r.ok)throw new Error("http");return r.json();})
       .then(function(j){
         CODES.forEach(function(k){var v=j.Valute[k];if(v&&v.Value>0)rates[k]=v.Value/v.Nominal;});
-        return "Курс ЦБ РФ на "+new Date(j.Date).toLocaleDateString("ru-RU");
+        return "Курс ЦБ РФ";
       });
   }
 
   function load(){
-    renderRates();
-    renderOut();
+    // Включаем спиннер
+    btn.disabled = true;
+    btnIcon.innerHTML = '<span class="spinner"></span>';
+    btnText.textContent = "Загрузка...";
     st.textContent = "Обновляю курсы…";
 
-    // Основной -> Резервный (чтобы быстро обходило блокировки) -> ЦБ
+    // Очередь: Рыночный -> Резервный (CDN) -> ЦБ
     fromMarket()
       .catch(fromBackup)
       .catch(fromCbr)
       .then(function(label){
-        save();renderRates();renderOut();
-        st.textContent = label + ". Свой курс можно ввести вручную.";
+        save();
+        renderRates();
+        renderOut();
+        st.textContent = label + ". Обновлено: " + new Date().toLocaleTimeString("ru-RU").slice(0,5);
       })
       .catch(function(){
         st.textContent = "Нет связи. Используется сохранённый курс.";
+      })
+      .finally(function(){
+        // Выключаем спиннер
+        btn.disabled = false;
+        btnIcon.innerHTML = '';
+        btnText.textContent = "Обновить курс";
       });
   }
 
-  document.getElementById("reset").onclick=load;
+  btn.onclick=load;
 
   renderTabs();renderRates();renderOut();load();
 
