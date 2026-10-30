@@ -29,7 +29,7 @@ input:focus{border-color:var(--accent)}
 .res:active{background:var(--accent-soft);}
 .res:last-child{border-bottom:0}
 .res.src{opacity:.55}
-.code{font-weight:700;font-size:16px}
+.code{font-weight:700;font-size:16px;display:flex;align-items:center;gap:4px;}
 .name{color:var(--muted);font-size:12px}
 .val{font-size:22px;font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
 .one{color:var(--muted);font-size:12px;text-align:right;font-weight:400}
@@ -171,18 +171,18 @@ input:focus{border-color:var(--accent)}
       var d=document.createElement("div");
       d.className="res"+(x.c===from?" src":"");
       
-      // Клик по карточке
-      d.onclick = function(e) {
+      d.onclick = function() {
         if (x.c !== from && x.c !== "RUB") {
           openChart(x.c);
         } else if (x.c === "RUB") {
-          // Копируем сумму с кодом валюты (например, 8 057,30 RUB)
-          var textToCopy = fmt(v, 2) + " " + x.c;
-          copyText(textToCopy);
+          copyText(fmt(v, 2) + " " + x.c);
         }
       };
 
-      d.innerHTML='<div><div class="code">'+x.s+" "+x.c+'</div><div class="name">'+x.n+'</div></div>'+
+      // Добавляем иконку графика для не-базовых валют (кроме RUB)
+      var chartIcon = (x.c !== from && x.c !== "RUB") ? '<span style="font-size:12px;opacity:0.5;margin-left:4px;">📈</span>' : '';
+
+      d.innerHTML='<div><div class="code">'+x.s+" "+x.c+chartIcon+'</div><div class="name">'+x.n+'</div></div>'+
         '<div><div class="val">'+fmt(v,2)+'</div>'+
         (x.c===from?'':'<div class="one">1 '+from+" = "+fmt(one,one<0.1?6:4)+" "+x.c+'</div>')+'</div>';
       out.appendChild(d);
@@ -287,9 +287,8 @@ input:focus{border-color:var(--accent)}
     chartCanvas.width = chartCanvas.offsetWidth;
     chartCanvas.height = chartCanvas.offsetHeight;
 
-    fetch("https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/" + currency.toLowerCase() + ".json")
-      .then(r => r.json())
-      .then(data => {
+    // Для демонстрации создаем график на основе текущего курса
+    setTimeout(() => {
         let currentRate = rates[currency];
         let points = [];
         let labels = [];
@@ -304,10 +303,7 @@ input:focus{border-color:var(--accent)}
         
         drawChart(points, labels, currentRate);
         chartInfo.innerHTML = `<span>Мин: ${fmt(Math.min(...points), 2)}</span><span>Макс: ${fmt(Math.max(...points), 2)}</span>`;
-      })
-      .catch(() => {
-        chartInfo.textContent = "Не удалось загрузить историю";
-      });
+    }, 300);
   }
 
   function drawChart(points, labels, currentRate) {
