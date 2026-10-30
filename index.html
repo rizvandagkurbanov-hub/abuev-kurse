@@ -49,16 +49,28 @@ input:focus{border-color:var(--accent)}
 .spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(59, 91, 219, 0.3);border-radius:50%;border-top-color:var(--accent);animation:spin 0.8s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
 
+/* Иконка графика (SVG) */
+.chart-icon {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 0.8;
+}
+
 /* Модальное окно графика */
 .modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(3px);display:none;justify-content:center;align-items:center;z-index:2000;padding:20px;opacity:0;transition:opacity 0.3s;}
 .modal.show{display:flex;opacity:1;}
-.modal-content{background:var(--card);padding:24px;border-radius:24px;width:100%;max-width:360px;box-shadow:0 20px 40px rgba(0,0,0,0.2);transform:scale(0.9);transition:transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);}
+.modal-content{background:var(--card);padding:24px;border-radius:24px;width:100%;max-width:380px;box-shadow:0 20px 40px rgba(0,0,0,0.2);transform:scale(0.9);transition:transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);}
 .modal.show .modal-content{transform:scale(1);}
 .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;}
-.modal-title{font-size:18px;font-weight:700;display:flex;align-items:center;gap:8px;}
-.close-btn{background:var(--bg);border:none;font-size:20px;color:var(--muted);cursor:pointer;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;}
-.chart-container{width:100%;height:160px;position:relative;}
-.chart-info{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin-top:15px;font-weight:500;}
+.modal-title{font-size:18px;font-weight:700;display:flex;align-items:center;gap:10px;}
+.close-btn{background:var(--bg);border:none;font-size:20px;color:var(--muted);cursor:pointer;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:background 0.2s;}
+.close-btn:active{background:var(--line);}
+.chart-container{width:100%;height:180px;position:relative;}
 </style>
 </head>
 <body>
@@ -89,13 +101,12 @@ input:focus{border-color:var(--accent)}
 <div class="modal" id="chartModal">
   <div class="modal-content">
     <div class="modal-header">
-      <div class="modal-title" id="chartTitle">📈 График</div>
+      <div class="modal-title" id="chartTitle">График</div>
       <button class="close-btn" id="closeChart">&times;</button>
     </div>
     <div class="chart-container" id="chartContainer">
       <canvas id="chartCanvas" style="width:100%; height:100%;"></canvas>
     </div>
-    <div class="chart-info" id="chartInfo"></div>
   </div>
 </div>
 
@@ -130,7 +141,6 @@ input:focus{border-color:var(--accent)}
   var closeChart = document.getElementById("closeChart");
   var chartCanvas = document.getElementById("chartCanvas");
   var chartTitle = document.getElementById("chartTitle");
-  var chartInfo = document.getElementById("chartInfo");
 
   function num(str){var v=parseFloat(String(str).replace(/\s/g,"").replace(",","."));return isFinite(v)?v:0;}
   function fmt(v,d){return v.toLocaleString("ru-RU",{minimumFractionDigits:d,maximumFractionDigits:d});}
@@ -176,7 +186,6 @@ input:focus{border-color:var(--accent)}
       var d=document.createElement("div");
       d.className="res"+(x.c===from?" src":"");
       
-      // Левая часть - открывает график
       var leftPart = document.createElement("div");
       leftPart.className = "res-left";
       leftPart.onclick = function() {
@@ -185,10 +194,12 @@ input:focus{border-color:var(--accent)}
         }
       };
       
-      var chartIcon = (x.c !== from && x.c !== "RUB") ? '<span style="font-size:14px;opacity:0.7;">📈</span>' : '';
+      // Красивая SVG-иконка графика
+      var chartIcon = (x.c !== from && x.c !== "RUB") ? 
+        '<svg class="chart-icon" viewBox="0 0 24 24"><polyline points="3 17 9 11 15 15 21 7"></polyline><polyline points="14 7 21 7 21 14"></polyline></svg>' : '';
+        
       leftPart.innerHTML = '<div class="code">'+x.s+" "+x.c+chartIcon+'</div><div class="name">'+x.n+'</div>';
 
-      // Правая часть - копирует
       var rightPart = document.createElement("div");
       rightPart.className = "res-right";
       rightPart.onclick = function() {
@@ -290,16 +301,22 @@ input:focus{border-color:var(--accent)}
 
   btn.onclick=load;
 
-  // --- ЛОГИКА ГРАФИКА (Улучшенная) ---
+  // --- ЛОГИКА ГРАФИКА ---
   function openChart(currency) {
     modal.classList.add("show");
-    chartTitle.textContent = "📈 " + currency + " к RUB";
-    chartInfo.textContent = "Загрузка данных...";
+    // Меняем заголовок с красивой иконкой
+    chartTitle.innerHTML = '<svg class="chart-icon" style="width:20px;height:20px;" viewBox="0 0 24 24"><polyline points="3 17 9 11 15 15 21 7"></polyline><polyline points="14 7 21 7 21 14"></polyline></svg> ' + currency + ' к RUB';
     
     const ctx = chartCanvas.getContext("2d");
     ctx.clearRect(0, 0, chartCanvas.width, chartCanvas.height);
-    chartCanvas.width = chartCanvas.offsetWidth;
-    chartCanvas.height = chartCanvas.offsetHeight;
+    
+    // Учитываем плотность пикселей (Retina)
+    const dpr = window.devicePixelRatio || 1;
+    const w = chartCanvas.offsetWidth;
+    const h = chartCanvas.offsetHeight;
+    chartCanvas.width = w * dpr;
+    chartCanvas.height = h * dpr;
+    ctx.scale(dpr, dpr);
 
     setTimeout(() => {
         let currentRate = rates[currency];
@@ -309,21 +326,22 @@ input:focus{border-color:var(--accent)}
         for(let i=6; i>=0; i--) {
             let tempDate = new Date(d);
             tempDate.setDate(d.getDate() - i);
+            // Форматируем дату: "день.месяц"
             labels.push(tempDate.getDate() + "." + (tempDate.getMonth()+1));
             let fluctuation = 1 + (Math.random() - 0.5) * 0.04; 
             points.push(currentRate * fluctuation);
         }
         
-        drawChart(points, labels, currentRate);
-        chartInfo.innerHTML = `<span>Мин: ${fmt(Math.min(...points), 2)}</span><span>Макс: ${fmt(Math.max(...points), 2)}</span>`;
+        drawChart(points, labels, w, h);
     }, 100);
   }
 
-  function drawChart(points, labels, currentRate) {
+  function drawChart(points, labels, w, h) {
     const ctx = chartCanvas.getContext("2d");
-    const w = chartCanvas.width;
-    const h = chartCanvas.height;
-    const padding = 20;
+    const paddingLeft = 10;
+    const paddingRight = 10;
+    const paddingTop = 20;
+    const paddingBottom = 30; // Оставляем место для подписей снизу
     
     const max = Math.max(...points);
     const min = Math.min(...points);
@@ -331,37 +349,35 @@ input:focus{border-color:var(--accent)}
     
     ctx.clearRect(0, 0, w, h);
     
-    // Сетка
+    let stepX = (w - paddingLeft - paddingRight) / (points.length - 1);
+    let coords = points.map((p, i) => ({
+        x: paddingLeft + i * stepX,
+        y: h - paddingBottom - ((p - min) / range) * (h - paddingTop - paddingBottom)
+    }));
+
+    // 1. Рисуем сетку (горизонтальные линии)
     ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--line').trim();
     ctx.lineWidth = 1;
-    for(let i=0; i<=4; i++) {
-        let y = padding + (h - padding*2) * (i/4);
+    for(let i=0; i<=3; i++) {
+        let y = paddingTop + (h - paddingTop - paddingBottom) * (i/3);
         ctx.beginPath();
-        ctx.moveTo(padding, y);
-        ctx.lineTo(w - padding, y);
+        ctx.moveTo(paddingLeft, y);
+        ctx.lineTo(w - paddingRight, y);
         ctx.stroke();
     }
 
-    // Градиент заливки
-    let gradient = ctx.createLinearGradient(0, 0, 0, h);
-    gradient.addColorStop(0, getComputedStyle(document.body).getPropertyValue('--accent-soft').trim());
-    gradient.addColorStop(1, "transparent");
+    // 2. Градиент для заливки
+    let gradient = ctx.createLinearGradient(0, paddingTop, 0, h - paddingBottom);
+    gradient.addColorStop(0, "rgba(124, 147, 255, 0.4)"); // Берем цвет акцента
+    gradient.addColorStop(1, "rgba(124, 147, 255, 0)");
 
-    // Плавная линия (используем кривые Безье)
+    // 3. Плавная линия
     ctx.beginPath();
     ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--accent').trim();
     ctx.lineWidth = 3;
     ctx.lineJoin = "round";
     ctx.lineCap = "round";
     
-    let stepX = (w - padding * 2) / (points.length - 1);
-    
-    let coords = points.map((p, i) => ({
-        x: padding + i * stepX,
-        y: h - padding - ((p - min) / range) * (h - padding * 2)
-    }));
-
-    // Рисуем плавную кривую
     ctx.moveTo(coords[0].x, coords[0].y);
     for (let i = 0; i < coords.length - 1; i++) {
         let midX = (coords[i].x + coords[i + 1].x) / 2;
@@ -369,14 +385,14 @@ input:focus{border-color:var(--accent)}
     }
     ctx.stroke();
 
-    // Заливка под графиком
-    ctx.lineTo(w - padding, h - padding);
-    ctx.lineTo(padding, h - padding);
+    // 4. Заливка под графиком
+    ctx.lineTo(coords[coords.length - 1].x, h - paddingBottom);
+    ctx.lineTo(coords[0].x, h - paddingBottom);
     ctx.closePath();
     ctx.fillStyle = gradient;
     ctx.fill();
     
-    // Рисуем точки
+    // 5. Точки на графике
     coords.forEach((c, i) => {
         ctx.beginPath();
         ctx.arc(c.x, c.y, 4, 0, Math.PI * 2);
@@ -385,6 +401,27 @@ input:focus{border-color:var(--accent)}
         ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--accent').trim();
         ctx.lineWidth = 2;
         ctx.stroke();
+    });
+
+    // 6. Подписи (Дата и Цена) под точками
+    ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--muted').trim();
+    ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.textAlign = "center";
+    
+    coords.forEach((c, i) => {
+        // Дата
+        ctx.fillText(labels[i], c.x, h - 10);
+        
+        // Цена (рисуем чуть выше даты)
+        ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--text').trim();
+        ctx.font = 'bold 9px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        // Округляем цену для аккуратности
+        let priceText = points[i].toFixed(1);
+        ctx.fillText(priceText, c.x, h - 22);
+        
+        // Возвращаем цвет для следующей даты
+        ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--muted').trim();
+        ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
     });
   }
 
