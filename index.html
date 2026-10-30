@@ -129,6 +129,7 @@ input:focus{border-color:var(--accent)}
   amt.oninput=renderOut;
 
   var CODES=["USD","EUR","AED","JPY","TRY","CNY"];
+  
   function fromMarket(){
     return fetch("https://open.er-api.com/v6/latest/USD",{cache:"no-store"})
       .then(function(r){if(!r.ok)throw new Error("http");return r.json();})
@@ -139,6 +140,7 @@ input:focus{border-color:var(--accent)}
         return "Рыночный курс (Exchange Rate API), обновлён "+new Date(j.time_last_update_utc).toLocaleString("ru-RU");
       });
   }
+  
   function fromCbr(){
     return fetch("https://www.cbr-xml-daily.ru/daily_json.js",{cache:"no-store"})
       .then(function(r){if(!r.ok)throw new Error("http");return r.json();})
@@ -148,17 +150,39 @@ input:focus{border-color:var(--accent)}
       });
   }
 
+  // Резервный источник (работает без VPN)
+  function fromBackup(){
+    return fetch("https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json",{cache:"no-store"})
+      .then(function(r){if(!r.ok)throw new Error("http");return r.json();})
+      .then(function(j){
+        var R = j.usd;
+        if(!R || !R.rub) throw new Error("data");
+        rates.USD = R.rub; 
+        rates.EUR = R.rub / R.eur;
+        rates.AED = R.rub / R.aed;
+        rates.JPY = R.rub / R.jpy;
+        rates.TRY = R.rub / R.try;
+        rates.CNY = R.rub / R.cny;
+        return "Резервный курс (CDN), обновлён " + new Date().toLocaleString("ru-RU");
+      });
+  }
+
   function load(){
     renderRates();
     renderOut();
-    st.textContent = "Показан сохранённый курс. Обновляю из сети…";
+    st.textContent = "Обновляю курсы…";
 
-    fromMarket().catch(fromCbr).then(function(label){
-      save();renderRates();renderOut();
-      st.textContent = label + ". Офлайн-версия всегда в файле; свой курс можно ввести вручную.";
-    }).catch(function(){
-      st.textContent = "Офлайн-режим: используется встроенный курс. Его можно изменить вручную.";
-    });
+    // Пробуем основной источник, если ошибка — ЦБ, если и там ошибка — резервный CDN
+    fromMarket()
+      .catch(fromCbr)
+      .catch(fromBackup)
+      .then(function(label){
+        save();renderRates();renderOut();
+        st.textContent = label + ". Свой курс можно ввести вручную.";
+      })
+      .catch(function(){
+        st.textContent = "Нет связи. Используется сохранённый курс.";
+      });
   }
 
   document.getElementById("reset").onclick=load;
