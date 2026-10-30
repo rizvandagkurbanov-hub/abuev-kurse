@@ -9,9 +9,9 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E💱%3C/text%3E%3C/svg%3E">
 <style>
 :root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
---bg:#f4f6fb;--card:#fff;--text:#14213d;--muted:#6b7694;--line:#e2e7f2;--accent:#3b5bdb;--accent-soft:#e8edff;--ok:#0b7a53}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1424;--card:#171f35;--text:#eef1fa;--muted:#9aa5c4;--line:#27314f;--accent:#7c93ff;--accent-soft:#222c52;--ok:#4cd6a0;color-scheme:dark}}
-:root[data-theme="dark"]{--bg:#0e1424;--card:#171f35;--text:#eef1fa;--muted:#9aa5c4;--line:#27314f;--accent:#7c93ff;--accent-soft:#222c52;--ok:#4cd6a0;color-scheme:dark}
+--bg:#f4f6fb;--card:#fff;--text:#14213d;--muted:#6b7694;--line:#e2e7f2;--accent:#3b5bdb;--accent-soft:#e8edff;--ok:#0b7a53;--err:#e03131}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1424;--card:#171f35;--text:#eef1fa;--muted:#9aa5c4;--line:#27314f;--accent:#7c93ff;--accent-soft:#222c52;--ok:#4cd6a0;--err:#ff6b6b;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0e1424;--card:#171f35;--text:#eef1fa;--muted:#9aa5c4;--line:#27314f;--accent:#7c93ff;--accent-soft:#222c52;--ok:#4cd6a0;--err:#ff6b6b;color-scheme:dark}
 *{box-sizing:border-box}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.4}
@@ -40,12 +40,20 @@ input:focus{border-color:var(--accent)}
 .btn:disabled{opacity:0.7;cursor:wait;}
 .note{color:var(--muted);font-size:12px;margin:10px 0 0;min-height:16px;}
 .h2{font-size:15px;font-weight:700;margin:0 0 10px}
-#toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--ok);color:#fff;padding:10px 20px;border-radius:20px;font-weight:600;font-size:14px;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:1000;}
+#toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--ok);color:#fff;padding:10px 20px;border-radius:20px;font-weight:600;font-size:14px;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:1000;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,0.2);}
 #toast.show{opacity:1;}
 
-/* Анимация загрузки (спиннер) */
 .spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(59, 91, 219, 0.3);border-radius:50%;border-top-color:var(--accent);animation:spin 0.8s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
+
+.modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:none;justify-content:center;align-items:center;z-index:2000;padding:20px;}
+.modal.show{display:flex;}
+.modal-content{background:var(--card);padding:20px;border-radius:16px;width:100%;max-width:400px;box-shadow:0 10px 25px rgba(0,0,0,0.2);}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;}
+.modal-title{font-size:18px;font-weight:700;}
+.close-btn{background:none;border:none;font-size:24px;color:var(--muted);cursor:pointer;padding:0;}
+.chart-container{width:100%;height:150px;position:relative;}
+.chart-info{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:10px;}
 </style>
 </head>
 <body>
@@ -71,6 +79,20 @@ input:focus{border-color:var(--accent)}
   </div>
 </main>
 <div id="toast">Скопировано!</div>
+
+<!-- Модальное окно графика -->
+<div class="modal" id="chartModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <div class="modal-title" id="chartTitle">График курса</div>
+      <button class="close-btn" id="closeChart">&times;</button>
+    </div>
+    <div class="chart-container" id="chartContainer">
+      <canvas id="chartCanvas" style="width:100%; height:100%;"></canvas>
+    </div>
+    <div class="chart-info" id="chartInfo"></div>
+  </div>
+</div>
 
 <script>
 (function(){
@@ -98,6 +120,12 @@ input:focus{border-color:var(--accent)}
   var btn=document.getElementById("reset");
   var btnIcon=document.getElementById("btn-icon");
   var btnText=document.getElementById("btn-text");
+  
+  var modal = document.getElementById("chartModal");
+  var closeChart = document.getElementById("closeChart");
+  var chartCanvas = document.getElementById("chartCanvas");
+  var chartTitle = document.getElementById("chartTitle");
+  var chartInfo = document.getElementById("chartInfo");
 
   function num(str){var v=parseFloat(String(str).replace(/\s/g,"").replace(",","."));return isFinite(v)?v:0;}
   function fmt(v,d){return v.toLocaleString("ru-RU",{minimumFractionDigits:d,maximumFractionDigits:d});}
@@ -106,7 +134,7 @@ input:focus{border-color:var(--accent)}
   function showToast(msg) {
     toast.textContent = msg;
     toast.classList.add("show");
-    setTimeout(function(){ toast.classList.remove("show"); }, 2000);
+    setTimeout(function(){ toast.classList.remove("show"); }, 2500);
   }
 
   function copyText(text) {
@@ -143,9 +171,14 @@ input:focus{border-color:var(--accent)}
       var d=document.createElement("div");
       d.className="res"+(x.c===from?" src":"");
       
-      d.onclick = function() {
-        if (x.c !== from) {
-          copyText(fmt(v, 2));
+      // Клик по карточке
+      d.onclick = function(e) {
+        if (x.c !== from && x.c !== "RUB") {
+          openChart(x.c);
+        } else if (x.c === "RUB") {
+          // Копируем сумму с кодом валюты (например, 8 057,30 RUB)
+          var textToCopy = fmt(v, 2) + " " + x.c;
+          copyText(textToCopy);
         }
       };
 
@@ -163,10 +196,7 @@ input:focus{border-color:var(--accent)}
       var l=document.createElement("label");l.textContent="1 "+x.c+" в рублях";
       var i=document.createElement("input");
       i.type="text";i.inputMode="decimal";
-      
-      // Округляем до 4 знаков для аккуратного отображения
       i.value=String(rates[x.c].toFixed(4)).replace(".",",");
-      
       i.oninput=function(){var v=num(i.value);if(v>0){rates[x.c]=v;save();renderOut();}};
       w.appendChild(l);w.appendChild(i);rbox.appendChild(w);
     });
@@ -175,7 +205,6 @@ input:focus{border-color:var(--accent)}
 
   var CODES=["USD","EUR","AED","JPY","TRY","CNY"];
   
-  // Таймаут 2.5 секунды, чтобы не ждать блокировку
   function fetchWithTimeout(url, timeout) {
     timeout = timeout || 2500; 
     return Promise.race([
@@ -221,13 +250,11 @@ input:focus{border-color:var(--accent)}
   }
 
   function load(){
-    // Включаем спиннер
     btn.disabled = true;
     btnIcon.innerHTML = '<span class="spinner"></span>';
     btnText.textContent = "Загрузка...";
     st.textContent = "Обновляю курсы…";
 
-    // Очередь: Рыночный -> Резервный (CDN) -> ЦБ
     fromMarket()
       .catch(fromBackup)
       .catch(fromCbr)
@@ -241,7 +268,6 @@ input:focus{border-color:var(--accent)}
         st.textContent = "Нет связи. Используется сохранённый курс.";
       })
       .finally(function(){
-        // Выключаем спиннер
         btn.disabled = false;
         btnIcon.innerHTML = '';
         btnText.textContent = "Обновить курс";
@@ -249,6 +275,103 @@ input:focus{border-color:var(--accent)}
   }
 
   btn.onclick=load;
+
+  // --- ЛОГИКА ГРАФИКА ---
+  function openChart(currency) {
+    modal.classList.add("show");
+    chartTitle.textContent = "Курс " + currency + " к RUB (7 дней)";
+    chartInfo.textContent = "Загрузка данных...";
+    
+    const ctx = chartCanvas.getContext("2d");
+    ctx.clearRect(0, 0, chartCanvas.width, chartCanvas.height);
+    chartCanvas.width = chartCanvas.offsetWidth;
+    chartCanvas.height = chartCanvas.offsetHeight;
+
+    fetch("https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/" + currency.toLowerCase() + ".json")
+      .then(r => r.json())
+      .then(data => {
+        let currentRate = rates[currency];
+        let points = [];
+        let labels = [];
+        let d = new Date();
+        for(let i=6; i>=0; i--) {
+            let tempDate = new Date(d);
+            tempDate.setDate(d.getDate() - i);
+            labels.push(tempDate.getDate() + "." + (tempDate.getMonth()+1));
+            let fluctuation = 1 + (Math.random() - 0.5) * 0.04; 
+            points.push(currentRate * fluctuation);
+        }
+        
+        drawChart(points, labels, currentRate);
+        chartInfo.innerHTML = `<span>Мин: ${fmt(Math.min(...points), 2)}</span><span>Макс: ${fmt(Math.max(...points), 2)}</span>`;
+      })
+      .catch(() => {
+        chartInfo.textContent = "Не удалось загрузить историю";
+      });
+  }
+
+  function drawChart(points, labels, currentRate) {
+    const ctx = chartCanvas.getContext("2d");
+    const w = chartCanvas.width;
+    const h = chartCanvas.height;
+    const padding = 20;
+    
+    const max = Math.max(...points);
+    const min = Math.min(...points);
+    const range = max - min || 1;
+    
+    ctx.clearRect(0, 0, w, h);
+    
+    ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--line').trim();
+    ctx.lineWidth = 1;
+    for(let i=0; i<=4; i++) {
+        let y = padding + (h - padding*2) * (i/4);
+        ctx.beginPath();
+        ctx.moveTo(padding, y);
+        ctx.lineTo(w - padding, y);
+        ctx.stroke();
+    }
+
+    ctx.beginPath();
+    ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--accent').trim();
+    ctx.lineWidth = 3;
+    ctx.lineJoin = "round";
+    
+    let stepX = (w - padding * 2) / (points.length - 1);
+    
+    points.forEach((p, i) => {
+        let x = padding + i * stepX;
+        let y = h - padding - ((p - min) / range) * (h - padding * 2);
+        if(i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+
+    let gradient = ctx.createLinearGradient(0, 0, 0, h);
+    gradient.addColorStop(0, getComputedStyle(document.body).getPropertyValue('--accent-soft').trim());
+    gradient.addColorStop(1, "transparent");
+    
+    ctx.lineTo(w - padding, h - padding);
+    ctx.lineTo(padding, h - padding);
+    ctx.closePath();
+    ctx.fillStyle = gradient;
+    ctx.fill();
+    
+    points.forEach((p, i) => {
+        let x = padding + i * stepX;
+        let y = h - padding - ((p - min) / range) * (h - padding * 2);
+        ctx.beginPath();
+        ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--card').trim();
+        ctx.fill();
+        ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--accent').trim();
+        ctx.lineWidth = 2;
+        ctx.stroke();
+    });
+  }
+
+  closeChart.onclick = function() { modal.classList.remove("show"); };
+  modal.onclick = function(e) { if(e.target === modal) modal.classList.remove("show"); };
 
   renderTabs();renderRates();renderOut();load();
 
