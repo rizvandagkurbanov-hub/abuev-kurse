@@ -6,7 +6,8 @@
 <title>Abuev</title>
 <meta name="apple-mobile-web-app-title" content="Abuev">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E💱%3C/text%3E%3C/svg%3E">
+<link rel="icon" type="image/png" href="./logo.png">
+<link rel="apple-touch-icon" href="./logo.png">
 <style>
 :root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
 --bg:#f4f6fb;--card:#fff;--text:#14213d;--muted:#6b7694;--line:#e2e7f2;--accent:#3b5bdb;--accent-soft:#e8edff;--ok:#0b7a53;--err:#e03131}
@@ -304,13 +305,11 @@ input:focus{border-color:var(--accent)}
   // --- ЛОГИКА ГРАФИКА ---
   function openChart(currency) {
     modal.classList.add("show");
-    // Меняем заголовок с красивой иконкой
     chartTitle.innerHTML = '<svg class="chart-icon" style="width:20px;height:20px;" viewBox="0 0 24 24"><polyline points="3 17 9 11 15 15 21 7"></polyline><polyline points="14 7 21 7 21 14"></polyline></svg> ' + currency + ' к RUB';
     
     const ctx = chartCanvas.getContext("2d");
     ctx.clearRect(0, 0, chartCanvas.width, chartCanvas.height);
     
-    // Учитываем плотность пикселей (Retina)
     const dpr = window.devicePixelRatio || 1;
     const w = chartCanvas.offsetWidth;
     const h = chartCanvas.offsetHeight;
@@ -326,7 +325,6 @@ input:focus{border-color:var(--accent)}
         for(let i=6; i>=0; i--) {
             let tempDate = new Date(d);
             tempDate.setDate(d.getDate() - i);
-            // Форматируем дату: "день.месяц"
             labels.push(tempDate.getDate() + "." + (tempDate.getMonth()+1));
             let fluctuation = 1 + (Math.random() - 0.5) * 0.04; 
             points.push(currentRate * fluctuation);
@@ -341,7 +339,7 @@ input:focus{border-color:var(--accent)}
     const paddingLeft = 10;
     const paddingRight = 10;
     const paddingTop = 20;
-    const paddingBottom = 30; // Оставляем место для подписей снизу
+    const paddingBottom = 30; 
     
     const max = Math.max(...points);
     const min = Math.min(...points);
@@ -355,7 +353,6 @@ input:focus{border-color:var(--accent)}
         y: h - paddingBottom - ((p - min) / range) * (h - paddingTop - paddingBottom)
     }));
 
-    // 1. Рисуем сетку (горизонтальные линии)
     ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--line').trim();
     ctx.lineWidth = 1;
     for(let i=0; i<=3; i++) {
@@ -366,12 +363,10 @@ input:focus{border-color:var(--accent)}
         ctx.stroke();
     }
 
-    // 2. Градиент для заливки
     let gradient = ctx.createLinearGradient(0, paddingTop, 0, h - paddingBottom);
-    gradient.addColorStop(0, "rgba(124, 147, 255, 0.4)"); // Берем цвет акцента
+    gradient.addColorStop(0, "rgba(124, 147, 255, 0.4)");
     gradient.addColorStop(1, "rgba(124, 147, 255, 0)");
 
-    // 3. Плавная линия
     ctx.beginPath();
     ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--accent').trim();
     ctx.lineWidth = 3;
@@ -385,14 +380,12 @@ input:focus{border-color:var(--accent)}
     }
     ctx.stroke();
 
-    // 4. Заливка под графиком
     ctx.lineTo(coords[coords.length - 1].x, h - paddingBottom);
     ctx.lineTo(coords[0].x, h - paddingBottom);
     ctx.closePath();
     ctx.fillStyle = gradient;
     ctx.fill();
     
-    // 5. Точки на графике
     coords.forEach((c, i) => {
         ctx.beginPath();
         ctx.arc(c.x, c.y, 4, 0, Math.PI * 2);
@@ -403,23 +396,18 @@ input:focus{border-color:var(--accent)}
         ctx.stroke();
     });
 
-    // 6. Подписи (Дата и Цена) под точками
     ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--muted').trim();
     ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
     ctx.textAlign = "center";
     
     coords.forEach((c, i) => {
-        // Дата
         ctx.fillText(labels[i], c.x, h - 10);
         
-        // Цена (рисуем чуть выше даты)
         ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--text').trim();
         ctx.font = 'bold 9px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-        // Округляем цену для аккуратности
         let priceText = points[i].toFixed(1);
         ctx.fillText(priceText, c.x, h - 22);
         
-        // Возвращаем цвет для следующей даты
         ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--muted').trim();
         ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
     });
