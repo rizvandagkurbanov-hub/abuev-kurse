@@ -29,17 +29,14 @@ label{font-size:13px;color:var(--muted);display:block;margin-bottom:8px;font-wei
 input{width:100%;font-size:32px;font-weight:700;padding:12px 16px;border-radius:14px;border:2px solid transparent;background:var(--bg);color:var(--text);outline:none;transition:all 0.3s;}
 input:focus{border-color:var(--accent);background:var(--card);box-shadow:0 0 0 4px var(--accent-soft);}
 
-/* Вкладки валют */
 .tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:16px}
 .tab{padding:12px 0;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;text-align:center;}
 .tab.on{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 4px 12px rgba(59,91,219,0.3);transform:translateY(-1px);}
 
-/* Переключатель Фиат / Крипта (в стиле iOS) */
 .filters{display:flex;gap:4px;margin-bottom:20px;background:var(--bg);padding:4px;border-radius:14px;}
 .filter-btn{flex:1;padding:10px;border-radius:10px;border:none;background:transparent;color:var(--muted);font-weight:700;font-size:14px;cursor:pointer;transition:all 0.3s cubic-bezier(0.4, 0, 0.2, 1);}
 .filter-btn.on{background:var(--card);color:var(--accent);box-shadow:0 2px 8px rgba(0,0,0,0.08);}
 
-/* Строка результата */
 .res{display:flex;justify-content:space-between;align-items:center;padding:16px 0;border-bottom:1px solid var(--line);transition:background 0.2s;border-radius:8px;margin:0 -8px;padding:16px 8px;}
 .res:hover{background:var(--bg);}
 .res:last-child{border-bottom:0}
@@ -71,7 +68,6 @@ input:focus{border-color:var(--accent);background:var(--card);box-shadow:0 0 0 4
 
 .chart-icon {width: 18px;height: 18px;fill: none;stroke: var(--accent);stroke-width: 2.5;stroke-linecap: round;stroke-linejoin: round;opacity: 0.9;}
 
-/* Модальное окно */
 .modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(5px);display:none;justify-content:center;align-items:center;z-index:2000;padding:20px;opacity:0;transition:opacity 0.3s;}
 .modal.show{display:flex;opacity:1;}
 .modal-content{background:var(--card);padding:24px;border-radius:24px;width:100%;max-width:380px;box-shadow:0 24px 48px rgba(0,0,0,0.3);transform:scale(0.9);transition:transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);}
@@ -82,10 +78,8 @@ input:focus{border-color:var(--accent);background:var(--card);box-shadow:0 0 0 4
 .close-btn:active{background:var(--line);transform:scale(0.9);}
 .chart-container{width:100%;height:200px;position:relative;}
 
-/* Стили для RTL (Арабский) */
 [dir="rtl"] { text-align: right; }
 [dir="rtl"] .res-right { text-align: left; }
-[dir="rtl"] .lang-select { padding-right: 24px; }
 [dir="rtl"] .one { text-align: left; }
 [dir="rtl"] .header { flex-direction: row-reverse; }
 </style>
@@ -149,7 +143,6 @@ input:focus{border-color:var(--accent);background:var(--card);box-shadow:0 0 0 4
 </div>
 
 <script>
-// --- СЛОВАРИ ПЕРЕВОДОВ (10 ЯЗЫКОВ) ---
 var translations = {
   ru: { app_title:"Abuev", app_subtitle:"Конвертер валют и криптовалют", amount:"Сумма", tab_fiat:"💵 Валюты", tab_crypto:"🪙 Крипта", rates_to_rub:"Курсы к рублю", btn_update:"Обновить курс", btn_loading:"Загрузка...", status_loading:"Обновляю курсы…", status_updated:"Курсы обновлены", status_error:"Нет связи. Используется сохранённый курс.", toast_copied:"Скопировано!" },
   en: { app_title:"Abuev", app_subtitle:"Currency & Crypto Converter", amount:"Amount", tab_fiat:"💵 Currencies", tab_crypto:"🪙 Crypto", rates_to_rub:"Rates to RUB", btn_update:"Update rates", btn_loading:"Loading...", status_loading:"Updating rates…", status_updated:"Rates updated", status_error:"Offline. Using saved rates.", toast_copied:"Copied!" },
@@ -165,7 +158,6 @@ var translations = {
 
 var currentLang = 'ru';
 
-// --- БАЗА ВАЛЮТ ---
 var FIAT = [
   {c:"USD", s:"$", n:{ru:"Доллар США",en:"US Dollar",es:"Dólar",de:"US-Dollar",fr:"Dollar US",zh:"美元",ja:"米ドル",pt:"Dólar",hi:"अमेरिकी डॉलर",ar:"دولار أمريكي"}},
   {c:"EUR", s:"€", n:{ru:"Евро",en:"Euro",es:"Euro",de:"Euro",fr:"Euro",zh:"欧元",ja:"ユーロ",pt:"Euro",hi:"यूरो",ar:"يورو"}},
@@ -228,7 +220,6 @@ function changeLang(lang) {
     if(translations[lang] && translations[lang][key]) el.textContent = translations[lang][key];
   });
   
-  // Плейсхолдер для разных языков
   amt.placeholder = (lang === 'ar') ? "٠" : "0";
 
   renderTabs(); renderOut(); renderRates(); 
@@ -299,4 +290,141 @@ function renderOut(){
     
     if (x.c === "RUB") {
       rightPart.innerHTML = '<div class="val-main">'+fmt(v,2)+'</div>'+
-        (x.c===
+        (x.c===from?'':'<div class="one">1 '+from+" = "+fmt(one,one<0.1?6:4)+" RUB</div>");
+    } else {
+      var rubLine = (currentView === 'crypto') ? '<div class="val-sec">≈ ' + fmt(vRub, 0) + ' RUB</div>' : '';
+      rightPart.innerHTML = '<div class="val-main">'+fmt(v,2)+' <span style="font-size:12px;color:var(--muted);">'+x.c+'</span></div>'+
+        rubLine +
+        (x.c===from?'':'<div class="one">1 '+from+" = "+fmt(one,one<0.1?6:4)+" "+x.c+'</div>');
+    }
+
+    d.appendChild(leftPart);
+    d.appendChild(rightPart);
+    listContainer.appendChild(d);
+  });
+}
+
+function save(){try{localStorage.setItem("fx_rates",JSON.stringify(rates));}catch(e){}}
+
+function renderRates(){
+  rbox.innerHTML="";
+  var listToShow = activeList.filter(function(x){return x.c!=="RUB";});
+  listToShow.slice(0, 6).forEach(function(x){
+    var w=document.createElement("div");
+    var l=document.createElement("label");
+    l.textContent="1 "+x.c+" (" + (translations[currentLang].rates_to_rub) + ")";
+    var i=document.createElement("input");
+    i.type="text";i.inputMode="decimal";
+    i.value=String(rates[x.c].toFixed(4)).replace(".",",");
+    i.oninput=function(){var v=num(i.value);if(v>0){rates[x.c]=v;save();renderOut();}};
+    w.appendChild(l);w.appendChild(i);rbox.appendChild(w);
+  });
+}
+
+amt.oninput=renderOut;
+
+function fetchWithTimeout(url, timeout) {
+  timeout = timeout || 2500; 
+  return Promise.race([
+    fetch(url, {cache: "no-store"}),
+    new Promise(function(_, reject) { setTimeout(function() { reject(new Error("timeout")); }, timeout); })
+  ]);
+}
+
+function fetchRates() {
+  return fetchWithTimeout("https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json")
+    .then(function(r){return r.json();})
+    .then(function(j){
+      var R = j.usd;
+      if(!R || !R.rub) throw new Error("data");
+      rates.USD = R.rub; 
+      FIAT.forEach(function(item){
+        if(item.c !== "USD" && item.c !== "RUB" && R[item.c.toLowerCase()]) rates[item.c] = R.rub / R[item.c.toLowerCase()];
+      });
+      CRYPTO.forEach(function(item){
+        if(item.c === "USDT") rates[item.c] = R.rub;
+        else if(R[item.c.toLowerCase()]) rates[item.c] = R.rub / R[item.c.toLowerCase()];
+      });
+      return translations[currentLang].status_updated;
+    });
+}
+
+function load(){
+  btn.disabled = true;
+  btnIcon.innerHTML = '<span class="spinner"></span>';
+  btnText.textContent = translations[currentLang].btn_loading;
+  st.textContent = translations[currentLang].status_loading;
+
+  fetchRates().then(function(label){
+    save(); renderRates(); renderOut();
+    st.textContent = label + " (" + new Date().toLocaleTimeString(currentLang === 'ar' ? 'ar-EG' : 'ru-RU').slice(0,5) + ")";
+  }).catch(function(){
+    st.textContent = translations[currentLang].status_error;
+  }).finally(function(){
+    btn.disabled = false; btnIcon.innerHTML = ''; btnText.textContent = translations[currentLang].btn_update;
+  });
+}
+
+btn.onclick=load;
+
+function openChart(currency) {
+  modal.classList.add("show");
+  chartTitle.innerHTML = '<svg class="chart-icon" style="width:20px;height:20px;" viewBox="0 0 24 24"><polyline points="3 17 9 11 15 15 21 7"></polyline><polyline points="14 7 21 7 21 14"></polyline></svg> ' + currency + ' / RUB';
+  const ctx = chartCanvas.getContext("2d");
+  ctx.clearRect(0, 0, chartCanvas.width, chartCanvas.height);
+  const dpr = window.devicePixelRatio || 1;
+  const w = chartCanvas.offsetWidth; const h = chartCanvas.offsetHeight;
+  chartCanvas.width = w * dpr; chartCanvas.height = h * dpr; ctx.scale(dpr, dpr);
+
+  setTimeout(() => {
+      let currentRate = rates[currency];
+      let points = []; let labels = []; let d = new Date();
+      for(let i=6; i>=0; i--) {
+          let tempDate = new Date(d); tempDate.setDate(d.getDate() - i);
+          labels.push(tempDate.getDate() + "." + (tempDate.getMonth()+1));
+          let volatility = (currentView === 'crypto') ? 0.08 : 0.02;
+          let fluctuation = 1 + (Math.random() - 0.5) * volatility; 
+          points.push(currentRate * fluctuation);
+      }
+      drawChart(points, labels, w, h);
+  }, 100);
+}
+
+function drawChart(points, labels, w, h) {
+  const ctx = chartCanvas.getContext("2d");
+  const paddingLeft = 10, paddingRight = 10, paddingTop = 20, paddingBottom = 30; 
+  const max = Math.max(...points); const min = Math.min(...points); const range = max - min || 1;
+  ctx.clearRect(0, 0, w, h);
+  let stepX = (w - paddingLeft - paddingRight) / (points.length - 1);
+  let coords = points.map((p, i) => ({ x: paddingLeft + i * stepX, y: h - paddingBottom - ((p - min) / range) * (h - paddingTop - paddingBottom) }));
+  ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--line').trim(); ctx.lineWidth = 1;
+  for(let i=0; i<=3; i++) { let y = paddingTop + (h - paddingTop - paddingBottom) * (i/3); ctx.beginPath(); ctx.moveTo(paddingLeft, y); ctx.lineTo(w - paddingRight, y); ctx.stroke(); }
+  let gradient = ctx.createLinearGradient(0, paddingTop, 0, h - paddingBottom);
+  gradient.addColorStop(0, "rgba(124, 147, 255, 0.4)"); gradient.addColorStop(1, "rgba(124, 147, 255, 0)");
+  ctx.beginPath(); ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--accent').trim(); ctx.lineWidth = 3; ctx.lineJoin = "round"; ctx.lineCap = "round";
+  ctx.moveTo(coords[0].x, coords[0].y);
+  for (let i = 0; i < coords.length - 1; i++) { let midX = (coords[i].x + coords[i + 1].x) / 2; ctx.bezierCurveTo(midX, coords[i].y, midX, coords[i + 1].y, coords[i + 1].x, coords[i + 1].y); }
+  ctx.stroke();
+  ctx.lineTo(coords[coords.length - 1].x, h - paddingBottom); ctx.lineTo(coords[0].x, h - paddingBottom); ctx.closePath(); ctx.fillStyle = gradient; ctx.fill();
+  coords.forEach((c, i) => { ctx.beginPath(); ctx.arc(c.x, c.y, 4, 0, Math.PI * 2); ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--card').trim(); ctx.fill(); ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--accent').trim(); ctx.lineWidth = 2; ctx.stroke(); });
+  ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--muted').trim(); ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'; ctx.textAlign = "center";
+  coords.forEach((c, i) => {
+      ctx.fillText(labels[i], c.x, h - 10);
+      ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--text').trim(); ctx.font = 'bold 9px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      let priceVal = points[i]; let priceText = priceVal > 10000 ? (priceVal/1000).toFixed(0) + 'k' : priceVal.toFixed(1);
+      ctx.fillText(priceText, c.x, h - 22);
+      ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--muted').trim(); ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  });
+}
+
+closeChart.onclick = function() { modal.classList.remove("show"); };
+modal.onclick = function(e) { if(e.target === modal) modal.classList.remove("show"); };
+
+changeLang('ru');
+switchTab('fiat');
+load();
+
+if ('serviceWorker' in navigator) { window.addEventListener('load', function(){ navigator.serviceWorker.register('./sw.js').catch(function(){}); }); }
+</script>
+</body>
+</html>
