@@ -15,7 +15,12 @@
 :root[data-theme="dark"]{--bg:#0e1424;--card:#171f35;--text:#eef1fa;--muted:#9aa5c4;--line:#27314f;--accent:#7c93ff;--accent-soft:#222c52;--ok:#4cd6a0;--err:#ff6b6b;color-scheme:dark}
 *{box-sizing:border-box}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
-body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.4}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.4;transition:padding 0.3s;}
+
+/* Шапка с логотипом и выбором языка */
+.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;}
+.lang-select{background:var(--card);border:1px solid var(--line);color:var(--text);padding:6px 10px;border-radius:8px;font-size:14px;font-weight:600;outline:none;cursor:pointer;}
+
 main{max-width:560px;margin:0 auto;padding:20px 16px 40px}
 h1{font-size:22px;margin:4px 0 2px}
 .sub{color:var(--muted);font-size:14px;margin:0 0 18px}
@@ -23,6 +28,8 @@ h1{font-size:22px;margin:4px 0 2px}
 label{font-size:13px;color:var(--muted);display:block;margin-bottom:6px}
 input{width:100%;font-size:28px;font-weight:600;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--text);outline:none;transition:border-color 0.2s;}
 input:focus{border-color:var(--accent)}
+
+/* Вкладки валют */
 .tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
 .tab{padding:10px 0;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s;text-align:center;}
 .tab.on{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 4px 10px rgba(59,91,219,0.2);}
@@ -32,6 +39,7 @@ input:focus{border-color:var(--accent)}
 .filter-btn{flex:1;padding:8px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--muted);font-weight:600;cursor:pointer;transition:all 0.2s;}
 .filter-btn.on{background:var(--card);color:var(--accent);border-color:var(--accent);box-shadow:0 2px 8px rgba(0,0,0,0.05);}
 
+/* Строка результата */
 .res{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid var(--line);}
 .res:last-child{border-bottom:0}
 .res.src{opacity:.55}
@@ -40,8 +48,13 @@ input:focus{border-color:var(--accent)}
 .res-right:active{background:var(--accent-soft);}
 .code{font-weight:700;font-size:16px;display:flex;align-items:center;gap:6px;}
 .name{color:var(--muted);font-size:12px}
-.val{font-size:22px;font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+
+/* Значения (RUB и USD) */
+.val-group{display:flex;flex-direction:column;align-items:flex-end;gap:2px;}
+.val-main{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;}
+.val-sec{font-size:14px;color:var(--muted);font-weight:600;font-variant-numeric:tabular-nums;}
 .one{color:var(--muted);font-size:12px;text-align:right;font-weight:400}
+
 .rates{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .rates input{font-size:17px;padding:8px 10px}
 .row{display:flex;gap:8px;margin-top:12px}
@@ -58,7 +71,6 @@ input:focus{border-color:var(--accent)}
 
 .chart-icon {width: 16px;height: 16px;fill: none;stroke: var(--accent);stroke-width: 2.5;stroke-linecap: round;stroke-linejoin: round;opacity: 0.8;}
 
-/* Модальное окно графика */
 .modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(3px);display:none;justify-content:center;align-items:center;z-index:2000;padding:20px;opacity:0;transition:opacity 0.3s;}
 .modal.show{display:flex;opacity:1;}
 .modal-content{background:var(--card);padding:24px;border-radius:24px;width:100%;max-width:380px;box-shadow:0 20px 40px rgba(0,0,0,0.2);transform:scale(0.9);transition:transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);}
@@ -72,12 +84,23 @@ input:focus{border-color:var(--accent)}
 </head>
 <body>
 <main>
-  <h1>Abuev</h1>
-  <p class="sub">Конвертер валют и криптовалют</p>
+  <div class="header">
+    <div>
+      <h1>Abuev</h1>
+      <p class="sub">Конвертер валют и криптовалют</p>
+    </div>
+    <select class="lang-select">
+      <option value="ru">RU 🇷🇺</option>
+      <option value="en">EN 🇬🇧</option>
+      <option value="de">DE 🇩🇪</option>
+      <option value="ar">AR 🇸🇦</option>
+    </select>
+  </div>
 
   <div class="card">
     <label for="amt">Сумма</label>
-    <input id="amt" type="text" inputmode="decimal" value="100" autocomplete="off">
+    <!-- value="" - пустое поле по умолчанию -->
+    <input id="amt" type="text" inputmode="decimal" value="" placeholder="0" autocomplete="off">
     <div class="tabs" id="tabs"></div>
   </div>
 
@@ -114,7 +137,6 @@ input:focus{border-color:var(--accent)}
 </div>
 
 <script>
-// --- БАЗА ВАЛЮТ ---
 var FIAT = [
   {c:"USD",n:"Доллар США",s:"$"}, {c:"EUR",n:"Евро",s:"€"}, {c:"RUB",n:"Российский рубль",s:"₽"},
   {c:"AED",n:"Дирхам ОАЭ",s:"د.إ"}, {c:"CNY",n:"Китайский юань",s:"元"}, {c:"JPY",n:"Японская иена",s:"¥"},
@@ -130,11 +152,10 @@ var CRYPTO = [
   {c:"TON",n:"Toncoin",s:"💎"}, {c:"DOGE",n:"Dogecoin",s:"Ð"}, {c:"ADA",n:"Cardano",s:"₳"}
 ];
 
-var currentView = 'fiat'; // 'fiat' или 'crypto'
+var currentView = 'fiat';
 var activeList = FIAT;
 var from = "USD";
 
-// Базовые курсы (офлайн)
 var DEF = {USD:80.67, EUR:89.81, AED:21.96, RUB:1, CNY:12.08, JPY:0.51, TRY:1.62, KZT:0.16, KGS:0.91, GBP:102.5, CHF:91.2, AMD:0.20, BYN:25.1, INR:0.97, KRW:0.06, CAD:58.9, AUD:52.8, UZS:0.0065, BTC:4500000, ETH:240000, USDT:80.6, BNB:40000, SOL:13000, XRP:50, TON:600, DOGE:12, ADA:35};
 
 var rates = Object.assign({}, DEF);
@@ -158,17 +179,17 @@ var chartTitle = document.getElementById("chartTitle");
 function switchTab(type) {
   currentView = type;
   activeList = (type === 'fiat') ? FIAT : CRYPTO;
-  from = activeList[0].c; // Сбрасываем базовую валюту на первую в списке
-  
+  from = activeList[0].c;
   document.getElementById('btnFiat').className = 'filter-btn' + (type === 'fiat' ? ' on' : '');
   document.getElementById('btnCrypto').className = 'filter-btn' + (type === 'crypto' ? ' on' : '');
-  
-  renderTabs();
-  renderOut();
-  renderRates();
+  renderTabs(); renderOut(); renderRates();
 }
 
-function num(str){var v=parseFloat(String(str).replace(/\s/g,"").replace(",","."));return isFinite(v)?v:0;}
+function num(str){
+  if(!str) return 0;
+  var v=parseFloat(String(str).replace(/\s/g,"").replace(",","."));
+  return isFinite(v)?v:0;
+}
 function fmt(v,d){return v.toLocaleString("ru-RU",{minimumFractionDigits:d,maximumFractionDigits:d});}
 function conv(a,f,t){return a*rates[f]/rates[t];}
 
@@ -206,16 +227,18 @@ function renderOut(){
   var a=num(amt.value);
   listContainer.innerHTML="";
   activeList.forEach(function(x){
-    var v=conv(a,from,x.c);
+    // Считаем в базовой валюте (например, в USD)
+    var v = conv(a, from, x.c);
+    // Считаем в рублях (если базовая не RUB)
+    var vRub = (x.c === "RUB") ? v : conv(v, x.c, "RUB");
+    
     var one=conv(1,from,x.c);
     var d=document.createElement("div");
     d.className="res"+(x.c===from?" src":"");
     
     var leftPart = document.createElement("div");
     leftPart.className = "res-left";
-    leftPart.onclick = function() {
-      if (x.c !== from) { openChart(x.c); }
-    };
+    leftPart.onclick = function() { if (x.c !== from) { openChart(x.c); } };
     
     var chartIcon = (x.c !== from) ? 
       '<svg class="chart-icon" viewBox="0 0 24 24"><polyline points="3 17 9 11 15 15 21 7"></polyline><polyline points="14 7 21 7 21 14"></polyline></svg>' : '';
@@ -225,8 +248,17 @@ function renderOut(){
     var rightPart = document.createElement("div");
     rightPart.className = "res-right";
     rightPart.onclick = function() { copyText(fmt(v, 2) + " " + x.c); };
-    rightPart.innerHTML = '<div class="val">'+fmt(v,2)+'</div>'+
-      (x.c===from?'':'<div class="one">1 '+from+" = "+fmt(one,one<0.1?6:4)+" "+x.c+'</div>');
+    
+    // Если валюта RUB, показываем только рубли. Для остальных - две строки (основная и в рублях)
+    if (x.c === "RUB") {
+      rightPart.innerHTML = '<div class="val-main">'+fmt(v,2)+'</div>'+
+        (x.c===from?'':'<div class="one">1 '+from+" = "+fmt(one,one<0.1?6:4)+" RUB</div>");
+    } else {
+      // Показываем сумму в валюте, а под ней мелко - в рублях
+      rightPart.innerHTML = '<div class="val-main">'+fmt(v,2)+' <span style="font-size:12px;color:var(--muted);">'+x.c+'</span></div>'+
+        '<div class="val-sec">≈ ' + fmt(vRub, 0) + ' RUB</div>'+
+        (x.c===from?'':'<div class="one">1 '+from+" = "+fmt(one,one<0.1?6:4)+" "+x.c+'</div>');
+    }
 
     d.appendChild(leftPart);
     d.appendChild(rightPart);
@@ -239,7 +271,6 @@ function save(){try{localStorage.setItem("fx_rates",JSON.stringify(rates));}catc
 function renderRates(){
   rbox.innerHTML="";
   var listToShow = activeList.filter(function(x){return x.c!=="RUB";});
-  // Чтобы не перегружать экран, показываем только первые 6 валют в настройках
   listToShow.slice(0, 6).forEach(function(x){
     var w=document.createElement("div");
     var l=document.createElement("label");l.textContent="1 "+x.c+" в рублях";
@@ -261,30 +292,20 @@ function fetchWithTimeout(url, timeout) {
   ]);
 }
 
-// Ищем курсы для всех валют
 function fetchRates() {
   return fetchWithTimeout("https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json")
     .then(function(r){return r.json();})
     .then(function(j){
       var R = j.usd;
       if(!R || !R.rub) throw new Error("data");
-      
       rates.USD = R.rub; 
-      // Обновляем фиат
       FIAT.forEach(function(item){
-        if(item.c !== "USD" && item.c !== "RUB" && R[item.c.toLowerCase()]) {
-          rates[item.c] = R.rub / R[item.c.toLowerCase()];
-        }
+        if(item.c !== "USD" && item.c !== "RUB" && R[item.c.toLowerCase()]) rates[item.c] = R.rub / R[item.c.toLowerCase()];
       });
-      
-      // Обновляем крипту
       CRYPTO.forEach(function(item){
-        if(item.c === "USDT") rates[item.c] = R.rub; // ЮСДТ привязан к доллару
-        else if(R[item.c.toLowerCase()]) {
-          rates[item.c] = R.rub / R[item.c.toLowerCase()];
-        }
+        if(item.c === "USDT") rates[item.c] = R.rub;
+        else if(R[item.c.toLowerCase()]) rates[item.c] = R.rub / R[item.c.toLowerCase()];
       });
-      
       return "Курсы обновлены";
     });
 }
@@ -294,56 +315,37 @@ function load(){
   btnIcon.innerHTML = '<span class="spinner"></span>';
   btnText.textContent = "Загрузка...";
   st.textContent = "Обновляю курсы…";
-
-  fetchRates()
-    .then(function(label){
-      save();
-      renderRates();
-      renderOut();
-      st.textContent = label + " (" + new Date().toLocaleTimeString("ru-RU").slice(0,5) + ")";
-    })
-    .catch(function(){
-      st.textContent = "Нет связи. Используется сохранённый курс.";
-    })
-    .finally(function(){
-      btn.disabled = false;
-      btnIcon.innerHTML = '';
-      btnText.textContent = "Обновить курс";
-    });
+  fetchRates().then(function(label){
+    save(); renderRates(); renderOut();
+    st.textContent = label + " (" + new Date().toLocaleTimeString("ru-RU").slice(0,5) + ")";
+  }).catch(function(){
+    st.textContent = "Нет связи. Используется сохранённый курс.";
+  }).finally(function(){
+    btn.disabled = false; btnIcon.innerHTML = ''; btnText.textContent = "Обновить курс";
+  });
 }
 
 btn.onclick=load;
 
-// --- ГРАФИК ---
 function openChart(currency) {
   modal.classList.add("show");
   chartTitle.innerHTML = '<svg class="chart-icon" style="width:20px;height:20px;" viewBox="0 0 24 24"><polyline points="3 17 9 11 15 15 21 7"></polyline><polyline points="14 7 21 7 21 14"></polyline></svg> ' + currency + ' к RUB';
-  
   const ctx = chartCanvas.getContext("2d");
   ctx.clearRect(0, 0, chartCanvas.width, chartCanvas.height);
-  
   const dpr = window.devicePixelRatio || 1;
-  const w = chartCanvas.offsetWidth;
-  const h = chartCanvas.offsetHeight;
-  chartCanvas.width = w * dpr;
-  chartCanvas.height = h * dpr;
-  ctx.scale(dpr, dpr);
+  const w = chartCanvas.offsetWidth; const h = chartCanvas.offsetHeight;
+  chartCanvas.width = w * dpr; chartCanvas.height = h * dpr; ctx.scale(dpr, dpr);
 
   setTimeout(() => {
       let currentRate = rates[currency];
-      let points = [];
-      let labels = [];
-      let d = new Date();
+      let points = []; let labels = []; let d = new Date();
       for(let i=6; i>=0; i--) {
-          let tempDate = new Date(d);
-          tempDate.setDate(d.getDate() - i);
+          let tempDate = new Date(d); tempDate.setDate(d.getDate() - i);
           labels.push(tempDate.getDate() + "." + (tempDate.getMonth()+1));
-          // Для крипты колебания больше, для фиата меньше
           let volatility = (currentView === 'crypto') ? 0.08 : 0.02;
           let fluctuation = 1 + (Math.random() - 0.5) * volatility; 
           points.push(currentRate * fluctuation);
       }
-      
       drawChart(points, labels, w, h);
   }, 100);
 }
@@ -351,83 +353,37 @@ function openChart(currency) {
 function drawChart(points, labels, w, h) {
   const ctx = chartCanvas.getContext("2d");
   const paddingLeft = 10, paddingRight = 10, paddingTop = 20, paddingBottom = 30; 
-  
-  const max = Math.max(...points);
-  const min = Math.min(...points);
-  const range = max - min || 1;
-  
+  const max = Math.max(...points); const min = Math.min(...points); const range = max - min || 1;
   ctx.clearRect(0, 0, w, h);
-  
   let stepX = (w - paddingLeft - paddingRight) / (points.length - 1);
-  let coords = points.map((p, i) => ({
-      x: paddingLeft + i * stepX,
-      y: h - paddingBottom - ((p - min) / range) * (h - paddingTop - paddingBottom)
-  }));
-
-  ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--line').trim();
-  ctx.lineWidth = 1;
-  for(let i=0; i<=3; i++) {
-      let y = paddingTop + (h - paddingTop - paddingBottom) * (i/3);
-      ctx.beginPath(); ctx.moveTo(paddingLeft, y); ctx.lineTo(w - paddingRight, y); ctx.stroke();
-  }
-
+  let coords = points.map((p, i) => ({ x: paddingLeft + i * stepX, y: h - paddingBottom - ((p - min) / range) * (h - paddingTop - paddingBottom) }));
+  ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--line').trim(); ctx.lineWidth = 1;
+  for(let i=0; i<=3; i++) { let y = paddingTop + (h - paddingTop - paddingBottom) * (i/3); ctx.beginPath(); ctx.moveTo(paddingLeft, y); ctx.lineTo(w - paddingRight, y); ctx.stroke(); }
   let gradient = ctx.createLinearGradient(0, paddingTop, 0, h - paddingBottom);
-  gradient.addColorStop(0, "rgba(124, 147, 255, 0.4)");
-  gradient.addColorStop(1, "rgba(124, 147, 255, 0)");
-
-  ctx.beginPath();
-  ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--accent').trim();
-  ctx.lineWidth = 3; ctx.lineJoin = "round"; ctx.lineCap = "round";
-  
+  gradient.addColorStop(0, "rgba(124, 147, 255, 0.4)"); gradient.addColorStop(1, "rgba(124, 147, 255, 0)");
+  ctx.beginPath(); ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--accent').trim(); ctx.lineWidth = 3; ctx.lineJoin = "round"; ctx.lineCap = "round";
   ctx.moveTo(coords[0].x, coords[0].y);
-  for (let i = 0; i < coords.length - 1; i++) {
-      let midX = (coords[i].x + coords[i + 1].x) / 2;
-      ctx.bezierCurveTo(midX, coords[i].y, midX, coords[i + 1].y, coords[i + 1].x, coords[i + 1].y);
-  }
+  for (let i = 0; i < coords.length - 1; i++) { let midX = (coords[i].x + coords[i + 1].x) / 2; ctx.bezierCurveTo(midX, coords[i].y, midX, coords[i + 1].y, coords[i + 1].x, coords[i + 1].y); }
   ctx.stroke();
-
-  ctx.lineTo(coords[coords.length - 1].x, h - paddingBottom);
-  ctx.lineTo(coords[0].x, h - paddingBottom);
-  ctx.closePath();
-  ctx.fillStyle = gradient; ctx.fill();
-  
-  coords.forEach((c, i) => {
-      ctx.beginPath(); ctx.arc(c.x, c.y, 4, 0, Math.PI * 2);
-      ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--card').trim(); ctx.fill();
-      ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--accent').trim(); ctx.lineWidth = 2; ctx.stroke();
-  });
-
-  ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--muted').trim();
-  ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-  ctx.textAlign = "center";
-  
+  ctx.lineTo(coords[coords.length - 1].x, h - paddingBottom); ctx.lineTo(coords[0].x, h - paddingBottom); ctx.closePath(); ctx.fillStyle = gradient; ctx.fill();
+  coords.forEach((c, i) => { ctx.beginPath(); ctx.arc(c.x, c.y, 4, 0, Math.PI * 2); ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--card').trim(); ctx.fill(); ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--accent').trim(); ctx.lineWidth = 2; ctx.stroke(); });
+  ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--muted').trim(); ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'; ctx.textAlign = "center";
   coords.forEach((c, i) => {
       ctx.fillText(labels[i], c.x, h - 10);
-      ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--text').trim();
-      ctx.font = 'bold 9px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      
-      // Если цена большая, сокращаем (например, 4.5 млн)
-      let priceVal = points[i];
-      let priceText = priceVal > 10000 ? (priceVal/1000).toFixed(0) + 'k' : priceVal.toFixed(1);
-      
+      ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--text').trim(); ctx.font = 'bold 9px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      let priceVal = points[i]; let priceText = priceVal > 10000 ? (priceVal/1000).toFixed(0) + 'k' : priceVal.toFixed(1);
       ctx.fillText(priceText, c.x, h - 22);
-      ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--muted').trim();
-      ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--muted').trim(); ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
   });
 }
 
 closeChart.onclick = function() { modal.classList.remove("show"); };
 modal.onclick = function(e) { if(e.target === modal) modal.classList.remove("show"); };
 
-// Инициализация
 switchTab('fiat');
 load();
 
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function(){
-    navigator.serviceWorker.register('./sw.js').catch(function(){});
-  });
-}
+if ('serviceWorker' in navigator) { window.addEventListener('load', function(){ navigator.serviceWorker.register('./sw.js').catch(function(){}); }); }
 </script>
 </body>
 </html>
