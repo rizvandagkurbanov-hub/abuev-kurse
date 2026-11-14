@@ -24,8 +24,14 @@ label{font-size:13px;color:var(--muted);display:block;margin-bottom:6px}
 input{width:100%;font-size:28px;font-weight:600;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--text);outline:none;transition:border-color 0.2s;}
 input:focus{border-color:var(--accent)}
 .tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
-.tab{padding:10px 0;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-size:15px;font-weight:600;cursor:pointer;transition:all 0.2s;}
+.tab{padding:10px 0;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s;text-align:center;}
 .tab.on{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 4px 10px rgba(59,91,219,0.2);}
+
+/* Переключатель Фиат / Крипта */
+.filters{display:flex;gap:8px;margin-bottom:12px;}
+.filter-btn{flex:1;padding:8px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--muted);font-weight:600;cursor:pointer;transition:all 0.2s;}
+.filter-btn.on{background:var(--card);color:var(--accent);border-color:var(--accent);box-shadow:0 2px 8px rgba(0,0,0,0.05);}
+
 .res{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid var(--line);}
 .res:last-child{border-bottom:0}
 .res.src{opacity:.55}
@@ -50,17 +56,7 @@ input:focus{border-color:var(--accent)}
 .spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(59, 91, 219, 0.3);border-radius:50%;border-top-color:var(--accent);animation:spin 0.8s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
 
-/* Иконка графика (SVG) */
-.chart-icon {
-    width: 16px;
-    height: 16px;
-    fill: none;
-    stroke: var(--accent);
-    stroke-width: 2.5;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    opacity: 0.8;
-}
+.chart-icon {width: 16px;height: 16px;fill: none;stroke: var(--accent);stroke-width: 2.5;stroke-linecap: round;stroke-linejoin: round;opacity: 0.8;}
 
 /* Модальное окно графика */
 .modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(3px);display:none;justify-content:center;align-items:center;z-index:2000;padding:20px;opacity:0;transition:opacity 0.3s;}
@@ -77,7 +73,7 @@ input:focus{border-color:var(--accent)}
 <body>
 <main>
   <h1>Abuev</h1>
-  <p class="sub">Конвертер валют: USD, EUR, AED, RUB, JPY, TRY, CNY</p>
+  <p class="sub">Конвертер валют и криптовалют</p>
 
   <div class="card">
     <label for="amt">Сумма</label>
@@ -85,7 +81,13 @@ input:focus{border-color:var(--accent)}
     <div class="tabs" id="tabs"></div>
   </div>
 
-  <div class="card" id="out"></div>
+  <div class="card" id="out">
+    <div class="filters">
+      <button class="filter-btn on" id="btnFiat" onclick="switchTab('fiat')">💵 Валюты</button>
+      <button class="filter-btn" id="btnCrypto" onclick="switchTab('crypto')">🪙 Крипта</button>
+    </div>
+    <div id="listContainer"></div>
+  </div>
 
   <div class="card">
     <p class="h2">Курсы к рублю</p>
@@ -112,317 +114,320 @@ input:focus{border-color:var(--accent)}
 </div>
 
 <script>
-(function(){
-  var CUR=[
-    {c:"USD",n:"Доллар США",s:"$"},
-    {c:"EUR",n:"Евро",s:"€"},
-    {c:"AED",n:"Дирхам ОАЭ",s:"د.إ"},
-    {c:"RUB",n:"Российский рубль",s:"₽"},
-    {c:"JPY",n:"Японская иена",s:"¥"},
-    {c:"TRY",n:"Турецкая лира",s:"₺"},
-    {c:"CNY",n:"Китайский юань",s:"元"}
-  ];
-  var DEF={USD:80.6761,EUR:89.8167,AED:21.9676,RUB:1,JPY:0.510705,TRY:1.62181,CNY:12.0844};
-  var rates=Object.assign({},DEF);
-  var from="USD";
-  try{var s=localStorage.getItem("fx_rates");if(s){var p=JSON.parse(s);for(var k in DEF){if(p[k]>0)rates[k]=p[k];}}}catch(e){}
-  rates.RUB=1;
+// --- БАЗА ВАЛЮТ ---
+var FIAT = [
+  {c:"USD",n:"Доллар США",s:"$"}, {c:"EUR",n:"Евро",s:"€"}, {c:"RUB",n:"Российский рубль",s:"₽"},
+  {c:"AED",n:"Дирхам ОАЭ",s:"د.إ"}, {c:"CNY",n:"Китайский юань",s:"元"}, {c:"JPY",n:"Японская иена",s:"¥"},
+  {c:"TRY",n:"Турецкая лира",s:"₺"}, {c:"KZT",n:"Казахстанский тенге",s:"₸"}, {c:"KGS",n:"Киргизский сом",s:"с"},
+  {c:"GBP",n:"Британский фунт",s:"£"}, {c:"CHF",n:"Швейцарский франк",s:"₣"}, {c:"AMD",n:"Армянский драм",s:"֏"},
+  {c:"BYN",n:"Белорусский рубль",s:"Br"}, {c:"INR",n:"Индийская рупия",s:"₹"}, {c:"KRW",n:"Южнокорейская вона",s:"₩"},
+  {c:"CAD",n:"Канадский доллар",s:"C$"}, {c:"AUD",n:"Австралийский доллар",s:"A$"}, {c:"UZS",n:"Узбекский сум",s:"so'm"}
+];
 
-  var amt=document.getElementById("amt");
-  var tabs=document.getElementById("tabs");
-  var out=document.getElementById("out");
-  var rbox=document.getElementById("rates");
-  var st=document.getElementById("st");
-  var toast=document.getElementById("toast");
-  var btn=document.getElementById("reset");
-  var btnIcon=document.getElementById("btn-icon");
-  var btnText=document.getElementById("btn-text");
+var CRYPTO = [
+  {c:"BTC",n:"Bitcoin",s:"₿"}, {c:"ETH",n:"Ethereum",s:"Ξ"}, {c:"USDT",n:"Tether",s:"₮"},
+  {c:"BNB",n:"Binance Coin",s:"B"}, {c:"SOL",n:"Solana",s:"◎"}, {c:"XRP",n:"Ripple",s:"XRP"},
+  {c:"TON",n:"Toncoin",s:"💎"}, {c:"DOGE",n:"Dogecoin",s:"Ð"}, {c:"ADA",n:"Cardano",s:"₳"}
+];
+
+var currentView = 'fiat'; // 'fiat' или 'crypto'
+var activeList = FIAT;
+var from = "USD";
+
+// Базовые курсы (офлайн)
+var DEF = {USD:80.67, EUR:89.81, AED:21.96, RUB:1, CNY:12.08, JPY:0.51, TRY:1.62, KZT:0.16, KGS:0.91, GBP:102.5, CHF:91.2, AMD:0.20, BYN:25.1, INR:0.97, KRW:0.06, CAD:58.9, AUD:52.8, UZS:0.0065, BTC:4500000, ETH:240000, USDT:80.6, BNB:40000, SOL:13000, XRP:50, TON:600, DOGE:12, ADA:35};
+
+var rates = Object.assign({}, DEF);
+try{var s=localStorage.getItem("fx_rates");if(s){var p=JSON.parse(s);for(var k in DEF){if(p[k]>0)rates[k]=p[k];}}}catch(e){}
+rates.RUB = 1;
+
+var amt=document.getElementById("amt");
+var tabs=document.getElementById("tabs");
+var rbox=document.getElementById("rates");
+var st=document.getElementById("st");
+var toast=document.getElementById("toast");
+var btn=document.getElementById("reset");
+var btnIcon=document.getElementById("btn-icon");
+var btnText=document.getElementById("btn-text");
+var listContainer = document.getElementById("listContainer");
+var modal = document.getElementById("chartModal");
+var closeChart = document.getElementById("closeChart");
+var chartCanvas = document.getElementById("chartCanvas");
+var chartTitle = document.getElementById("chartTitle");
+
+function switchTab(type) {
+  currentView = type;
+  activeList = (type === 'fiat') ? FIAT : CRYPTO;
+  from = activeList[0].c; // Сбрасываем базовую валюту на первую в списке
   
-  var modal = document.getElementById("chartModal");
-  var closeChart = document.getElementById("closeChart");
-  var chartCanvas = document.getElementById("chartCanvas");
-  var chartTitle = document.getElementById("chartTitle");
+  document.getElementById('btnFiat').className = 'filter-btn' + (type === 'fiat' ? ' on' : '');
+  document.getElementById('btnCrypto').className = 'filter-btn' + (type === 'crypto' ? ' on' : '');
+  
+  renderTabs();
+  renderOut();
+  renderRates();
+}
 
-  function num(str){var v=parseFloat(String(str).replace(/\s/g,"").replace(",","."));return isFinite(v)?v:0;}
-  function fmt(v,d){return v.toLocaleString("ru-RU",{minimumFractionDigits:d,maximumFractionDigits:d});}
-  function conv(a,f,t){return a*rates[f]/rates[t];}
+function num(str){var v=parseFloat(String(str).replace(/\s/g,"").replace(",","."));return isFinite(v)?v:0;}
+function fmt(v,d){return v.toLocaleString("ru-RU",{minimumFractionDigits:d,maximumFractionDigits:d});}
+function conv(a,f,t){return a*rates[f]/rates[t];}
 
-  function showToast(msg) {
-    toast.textContent = msg;
-    toast.classList.add("show");
-    setTimeout(function(){ toast.classList.remove("show"); }, 2500);
+function showToast(msg) {
+  toast.textContent = msg;
+  toast.classList.add("show");
+  setTimeout(function(){ toast.classList.remove("show"); }, 2500);
+}
+
+function copyText(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(function(){ showToast("Скопировано: " + text); }).catch(function(){ showToast("Ошибка"); });
+  } else {
+    var t = document.createElement("textarea");
+    t.value = text;
+    document.body.appendChild(t);
+    t.select();
+    try { document.execCommand("copy"); showToast("Скопировано: " + text); } catch(e) { showToast("Ошибка"); }
+    document.body.removeChild(t);
   }
+}
 
-  function copyText(text) {
-    if (navigator.clipboard && window.isSecureContext) {
-      navigator.clipboard.writeText(text).then(function(){
-        showToast("Скопировано: " + text);
-      }).catch(function(){ showToast("Ошибка копирования"); });
-    } else {
-      var t = document.createElement("textarea");
-      t.value = text;
-      document.body.appendChild(t);
-      t.select();
-      try { document.execCommand("copy"); showToast("Скопировано: " + text); } catch(e) { showToast("Ошибка"); }
-      document.body.removeChild(t);
-    }
-  }
+function renderTabs(){
+  tabs.innerHTML="";
+  activeList.forEach(function(x){
+    var b=document.createElement("button");
+    b.className="tab"+(x.c===from?" on":"");
+    b.textContent=x.c;
+    b.onclick=function(){from=x.c;renderTabs();renderOut();};
+    tabs.appendChild(b);
+  });
+}
 
-  function renderTabs(){
-    tabs.innerHTML="";
-    CUR.forEach(function(x){
-      var b=document.createElement("button");
-      b.className="tab"+(x.c===from?" on":"");
-      b.textContent=x.c;
-      b.onclick=function(){from=x.c;renderTabs();renderOut();};
-      tabs.appendChild(b);
-    });
-  }
-  function renderOut(){
-    var a=num(amt.value);
-    out.innerHTML="";
-    CUR.forEach(function(x){
-      var v=conv(a,from,x.c);
-      var one=conv(1,from,x.c);
-      var d=document.createElement("div");
-      d.className="res"+(x.c===from?" src":"");
+function renderOut(){
+  var a=num(amt.value);
+  listContainer.innerHTML="";
+  activeList.forEach(function(x){
+    var v=conv(a,from,x.c);
+    var one=conv(1,from,x.c);
+    var d=document.createElement("div");
+    d.className="res"+(x.c===from?" src":"");
+    
+    var leftPart = document.createElement("div");
+    leftPart.className = "res-left";
+    leftPart.onclick = function() {
+      if (x.c !== from) { openChart(x.c); }
+    };
+    
+    var chartIcon = (x.c !== from) ? 
+      '<svg class="chart-icon" viewBox="0 0 24 24"><polyline points="3 17 9 11 15 15 21 7"></polyline><polyline points="14 7 21 7 21 14"></polyline></svg>' : '';
       
-      var leftPart = document.createElement("div");
-      leftPart.className = "res-left";
-      leftPart.onclick = function() {
-        if (x.c !== from && x.c !== "RUB") {
-          openChart(x.c);
-        }
-      };
+    leftPart.innerHTML = '<div class="code">'+x.s+" "+x.c+chartIcon+'</div><div class="name">'+x.n+'</div>';
+
+    var rightPart = document.createElement("div");
+    rightPart.className = "res-right";
+    rightPart.onclick = function() { copyText(fmt(v, 2) + " " + x.c); };
+    rightPart.innerHTML = '<div class="val">'+fmt(v,2)+'</div>'+
+      (x.c===from?'':'<div class="one">1 '+from+" = "+fmt(one,one<0.1?6:4)+" "+x.c+'</div>');
+
+    d.appendChild(leftPart);
+    d.appendChild(rightPart);
+    listContainer.appendChild(d);
+  });
+}
+
+function save(){try{localStorage.setItem("fx_rates",JSON.stringify(rates));}catch(e){}}
+
+function renderRates(){
+  rbox.innerHTML="";
+  var listToShow = activeList.filter(function(x){return x.c!=="RUB";});
+  // Чтобы не перегружать экран, показываем только первые 6 валют в настройках
+  listToShow.slice(0, 6).forEach(function(x){
+    var w=document.createElement("div");
+    var l=document.createElement("label");l.textContent="1 "+x.c+" в рублях";
+    var i=document.createElement("input");
+    i.type="text";i.inputMode="decimal";
+    i.value=String(rates[x.c].toFixed(4)).replace(".",",");
+    i.oninput=function(){var v=num(i.value);if(v>0){rates[x.c]=v;save();renderOut();}};
+    w.appendChild(l);w.appendChild(i);rbox.appendChild(w);
+  });
+}
+
+amt.oninput=renderOut;
+
+function fetchWithTimeout(url, timeout) {
+  timeout = timeout || 2500; 
+  return Promise.race([
+    fetch(url, {cache: "no-store"}),
+    new Promise(function(_, reject) { setTimeout(function() { reject(new Error("timeout")); }, timeout); })
+  ]);
+}
+
+// Ищем курсы для всех валют
+function fetchRates() {
+  return fetchWithTimeout("https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json")
+    .then(function(r){return r.json();})
+    .then(function(j){
+      var R = j.usd;
+      if(!R || !R.rub) throw new Error("data");
       
-      var chartIcon = (x.c !== from && x.c !== "RUB") ? 
-        '<svg class="chart-icon" viewBox="0 0 24 24"><polyline points="3 17 9 11 15 15 21 7"></polyline><polyline points="14 7 21 7 21 14"></polyline></svg>' : '';
-        
-      leftPart.innerHTML = '<div class="code">'+x.s+" "+x.c+chartIcon+'</div><div class="name">'+x.n+'</div>';
-
-      var rightPart = document.createElement("div");
-      rightPart.className = "res-right";
-      rightPart.onclick = function() {
-        copyText(fmt(v, 2) + " " + x.c);
-      };
-      rightPart.innerHTML = '<div class="val">'+fmt(v,2)+'</div>'+
-        (x.c===from?'':'<div class="one">1 '+from+" = "+fmt(one,one<0.1?6:4)+" "+x.c+'</div>');
-
-      d.appendChild(leftPart);
-      d.appendChild(rightPart);
-      out.appendChild(d);
-    });
-  }
-  function save(){try{localStorage.setItem("fx_rates",JSON.stringify(rates));}catch(e){}}
-  function renderRates(){
-    rbox.innerHTML="";
-    CUR.filter(function(x){return x.c!=="RUB";}).forEach(function(x){
-      var w=document.createElement("div");
-      var l=document.createElement("label");l.textContent="1 "+x.c+" в рублях";
-      var i=document.createElement("input");
-      i.type="text";i.inputMode="decimal";
-      i.value=String(rates[x.c].toFixed(4)).replace(".",",");
-      i.oninput=function(){var v=num(i.value);if(v>0){rates[x.c]=v;save();renderOut();}};
-      w.appendChild(l);w.appendChild(i);rbox.appendChild(w);
-    });
-  }
-  amt.oninput=renderOut;
-
-  var CODES=["USD","EUR","AED","JPY","TRY","CNY"];
-  
-  function fetchWithTimeout(url, timeout) {
-    timeout = timeout || 2500; 
-    return Promise.race([
-      fetch(url, {cache: "no-store"}),
-      new Promise(function(_, reject) { setTimeout(function() { reject(new Error("timeout")); }, timeout); })
-    ]);
-  }
-
-  function fromMarket(){
-    return fetchWithTimeout("https://open.er-api.com/v6/latest/USD")
-      .then(function(r){if(!r.ok)throw new Error("http");return r.json();})
-      .then(function(j){
-        var R=j.rates;
-        if(j.result!=="success"||!(R&&R.RUB>0))throw new Error("data");
-        CODES.forEach(function(k){if(R[k]>0)rates[k]=R.RUB/R[k];});
-        return "Рыночный курс";
-      });
-  }
-  
-  function fromBackup(){
-    return fetchWithTimeout("https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json")
-      .then(function(r){if(!r.ok)throw new Error("http");return r.json();})
-      .then(function(j){
-        var R = j.usd;
-        if(!R || !R.rub) throw new Error("data");
-        rates.USD = R.rub; 
-        rates.EUR = R.rub / R.eur;
-        rates.AED = R.rub / R.aed;
-        rates.JPY = R.rub / R.jpy;
-        rates.TRY = R.rub / R.try;
-        rates.CNY = R.rub / R.cny;
-        return "Резервный курс (CDN)";
-      });
-  }
-
-  function fromCbr(){
-    return fetchWithTimeout("https://www.cbr-xml-daily.ru/daily_json.js")
-      .then(function(r){if(!r.ok)throw new Error("http");return r.json();})
-      .then(function(j){
-        CODES.forEach(function(k){var v=j.Valute[k];if(v&&v.Value>0)rates[k]=v.Value/v.Nominal;});
-        return "Курс ЦБ РФ";
-      });
-  }
-
-  function load(){
-    btn.disabled = true;
-    btnIcon.innerHTML = '<span class="spinner"></span>';
-    btnText.textContent = "Загрузка...";
-    st.textContent = "Обновляю курсы…";
-
-    fromMarket()
-      .catch(fromBackup)
-      .catch(fromCbr)
-      .then(function(label){
-        save();
-        renderRates();
-        renderOut();
-        st.textContent = label + ". Обновлено: " + new Date().toLocaleTimeString("ru-RU").slice(0,5);
-      })
-      .catch(function(){
-        st.textContent = "Нет связи. Используется сохранённый курс.";
-      })
-      .finally(function(){
-        btn.disabled = false;
-        btnIcon.innerHTML = '';
-        btnText.textContent = "Обновить курс";
-      });
-  }
-
-  btn.onclick=load;
-
-  // --- ЛОГИКА ГРАФИКА ---
-  function openChart(currency) {
-    modal.classList.add("show");
-    chartTitle.innerHTML = '<svg class="chart-icon" style="width:20px;height:20px;" viewBox="0 0 24 24"><polyline points="3 17 9 11 15 15 21 7"></polyline><polyline points="14 7 21 7 21 14"></polyline></svg> ' + currency + ' к RUB';
-    
-    const ctx = chartCanvas.getContext("2d");
-    ctx.clearRect(0, 0, chartCanvas.width, chartCanvas.height);
-    
-    const dpr = window.devicePixelRatio || 1;
-    const w = chartCanvas.offsetWidth;
-    const h = chartCanvas.offsetHeight;
-    chartCanvas.width = w * dpr;
-    chartCanvas.height = h * dpr;
-    ctx.scale(dpr, dpr);
-
-    setTimeout(() => {
-        let currentRate = rates[currency];
-        let points = [];
-        let labels = [];
-        let d = new Date();
-        for(let i=6; i>=0; i--) {
-            let tempDate = new Date(d);
-            tempDate.setDate(d.getDate() - i);
-            labels.push(tempDate.getDate() + "." + (tempDate.getMonth()+1));
-            let fluctuation = 1 + (Math.random() - 0.5) * 0.04; 
-            points.push(currentRate * fluctuation);
+      rates.USD = R.rub; 
+      // Обновляем фиат
+      FIAT.forEach(function(item){
+        if(item.c !== "USD" && item.c !== "RUB" && R[item.c.toLowerCase()]) {
+          rates[item.c] = R.rub / R[item.c.toLowerCase()];
         }
-        
-        drawChart(points, labels, w, h);
-    }, 100);
+      });
+      
+      // Обновляем крипту
+      CRYPTO.forEach(function(item){
+        if(item.c === "USDT") rates[item.c] = R.rub; // ЮСДТ привязан к доллару
+        else if(R[item.c.toLowerCase()]) {
+          rates[item.c] = R.rub / R[item.c.toLowerCase()];
+        }
+      });
+      
+      return "Курсы обновлены";
+    });
+}
+
+function load(){
+  btn.disabled = true;
+  btnIcon.innerHTML = '<span class="spinner"></span>';
+  btnText.textContent = "Загрузка...";
+  st.textContent = "Обновляю курсы…";
+
+  fetchRates()
+    .then(function(label){
+      save();
+      renderRates();
+      renderOut();
+      st.textContent = label + " (" + new Date().toLocaleTimeString("ru-RU").slice(0,5) + ")";
+    })
+    .catch(function(){
+      st.textContent = "Нет связи. Используется сохранённый курс.";
+    })
+    .finally(function(){
+      btn.disabled = false;
+      btnIcon.innerHTML = '';
+      btnText.textContent = "Обновить курс";
+    });
+}
+
+btn.onclick=load;
+
+// --- ГРАФИК ---
+function openChart(currency) {
+  modal.classList.add("show");
+  chartTitle.innerHTML = '<svg class="chart-icon" style="width:20px;height:20px;" viewBox="0 0 24 24"><polyline points="3 17 9 11 15 15 21 7"></polyline><polyline points="14 7 21 7 21 14"></polyline></svg> ' + currency + ' к RUB';
+  
+  const ctx = chartCanvas.getContext("2d");
+  ctx.clearRect(0, 0, chartCanvas.width, chartCanvas.height);
+  
+  const dpr = window.devicePixelRatio || 1;
+  const w = chartCanvas.offsetWidth;
+  const h = chartCanvas.offsetHeight;
+  chartCanvas.width = w * dpr;
+  chartCanvas.height = h * dpr;
+  ctx.scale(dpr, dpr);
+
+  setTimeout(() => {
+      let currentRate = rates[currency];
+      let points = [];
+      let labels = [];
+      let d = new Date();
+      for(let i=6; i>=0; i--) {
+          let tempDate = new Date(d);
+          tempDate.setDate(d.getDate() - i);
+          labels.push(tempDate.getDate() + "." + (tempDate.getMonth()+1));
+          // Для крипты колебания больше, для фиата меньше
+          let volatility = (currentView === 'crypto') ? 0.08 : 0.02;
+          let fluctuation = 1 + (Math.random() - 0.5) * volatility; 
+          points.push(currentRate * fluctuation);
+      }
+      
+      drawChart(points, labels, w, h);
+  }, 100);
+}
+
+function drawChart(points, labels, w, h) {
+  const ctx = chartCanvas.getContext("2d");
+  const paddingLeft = 10, paddingRight = 10, paddingTop = 20, paddingBottom = 30; 
+  
+  const max = Math.max(...points);
+  const min = Math.min(...points);
+  const range = max - min || 1;
+  
+  ctx.clearRect(0, 0, w, h);
+  
+  let stepX = (w - paddingLeft - paddingRight) / (points.length - 1);
+  let coords = points.map((p, i) => ({
+      x: paddingLeft + i * stepX,
+      y: h - paddingBottom - ((p - min) / range) * (h - paddingTop - paddingBottom)
+  }));
+
+  ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--line').trim();
+  ctx.lineWidth = 1;
+  for(let i=0; i<=3; i++) {
+      let y = paddingTop + (h - paddingTop - paddingBottom) * (i/3);
+      ctx.beginPath(); ctx.moveTo(paddingLeft, y); ctx.lineTo(w - paddingRight, y); ctx.stroke();
   }
 
-  function drawChart(points, labels, w, h) {
-    const ctx = chartCanvas.getContext("2d");
-    const paddingLeft = 10;
-    const paddingRight = 10;
-    const paddingTop = 20;
-    const paddingBottom = 30; 
-    
-    const max = Math.max(...points);
-    const min = Math.min(...points);
-    const range = max - min || 1;
-    
-    ctx.clearRect(0, 0, w, h);
-    
-    let stepX = (w - paddingLeft - paddingRight) / (points.length - 1);
-    let coords = points.map((p, i) => ({
-        x: paddingLeft + i * stepX,
-        y: h - paddingBottom - ((p - min) / range) * (h - paddingTop - paddingBottom)
-    }));
+  let gradient = ctx.createLinearGradient(0, paddingTop, 0, h - paddingBottom);
+  gradient.addColorStop(0, "rgba(124, 147, 255, 0.4)");
+  gradient.addColorStop(1, "rgba(124, 147, 255, 0)");
 
-    ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--line').trim();
-    ctx.lineWidth = 1;
-    for(let i=0; i<=3; i++) {
-        let y = paddingTop + (h - paddingTop - paddingBottom) * (i/3);
-        ctx.beginPath();
-        ctx.moveTo(paddingLeft, y);
-        ctx.lineTo(w - paddingRight, y);
-        ctx.stroke();
-    }
-
-    let gradient = ctx.createLinearGradient(0, paddingTop, 0, h - paddingBottom);
-    gradient.addColorStop(0, "rgba(124, 147, 255, 0.4)");
-    gradient.addColorStop(1, "rgba(124, 147, 255, 0)");
-
-    ctx.beginPath();
-    ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--accent').trim();
-    ctx.lineWidth = 3;
-    ctx.lineJoin = "round";
-    ctx.lineCap = "round";
-    
-    ctx.moveTo(coords[0].x, coords[0].y);
-    for (let i = 0; i < coords.length - 1; i++) {
-        let midX = (coords[i].x + coords[i + 1].x) / 2;
-        ctx.bezierCurveTo(midX, coords[i].y, midX, coords[i + 1].y, coords[i + 1].x, coords[i + 1].y);
-    }
-    ctx.stroke();
-
-    ctx.lineTo(coords[coords.length - 1].x, h - paddingBottom);
-    ctx.lineTo(coords[0].x, h - paddingBottom);
-    ctx.closePath();
-    ctx.fillStyle = gradient;
-    ctx.fill();
-    
-    coords.forEach((c, i) => {
-        ctx.beginPath();
-        ctx.arc(c.x, c.y, 4, 0, Math.PI * 2);
-        ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--card').trim();
-        ctx.fill();
-        ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--accent').trim();
-        ctx.lineWidth = 2;
-        ctx.stroke();
-    });
-
-    ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--muted').trim();
-    ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.textAlign = "center";
-    
-    coords.forEach((c, i) => {
-        ctx.fillText(labels[i], c.x, h - 10);
-        
-        ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--text').trim();
-        ctx.font = 'bold 9px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-        let priceText = points[i].toFixed(1);
-        ctx.fillText(priceText, c.x, h - 22);
-        
-        ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--muted').trim();
-        ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    });
+  ctx.beginPath();
+  ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--accent').trim();
+  ctx.lineWidth = 3; ctx.lineJoin = "round"; ctx.lineCap = "round";
+  
+  ctx.moveTo(coords[0].x, coords[0].y);
+  for (let i = 0; i < coords.length - 1; i++) {
+      let midX = (coords[i].x + coords[i + 1].x) / 2;
+      ctx.bezierCurveTo(midX, coords[i].y, midX, coords[i + 1].y, coords[i + 1].x, coords[i + 1].y);
   }
+  ctx.stroke();
 
-  closeChart.onclick = function() { modal.classList.remove("show"); };
-  modal.onclick = function(e) { if(e.target === modal) modal.classList.remove("show"); };
+  ctx.lineTo(coords[coords.length - 1].x, h - paddingBottom);
+  ctx.lineTo(coords[0].x, h - paddingBottom);
+  ctx.closePath();
+  ctx.fillStyle = gradient; ctx.fill();
+  
+  coords.forEach((c, i) => {
+      ctx.beginPath(); ctx.arc(c.x, c.y, 4, 0, Math.PI * 2);
+      ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--card').trim(); ctx.fill();
+      ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--accent').trim(); ctx.lineWidth = 2; ctx.stroke();
+  });
 
-  renderTabs();renderRates();renderOut();load();
+  ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--muted').trim();
+  ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  ctx.textAlign = "center";
+  
+  coords.forEach((c, i) => {
+      ctx.fillText(labels[i], c.x, h - 10);
+      ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--text').trim();
+      ctx.font = 'bold 9px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      
+      // Если цена большая, сокращаем (например, 4.5 млн)
+      let priceVal = points[i];
+      let priceText = priceVal > 10000 ? (priceVal/1000).toFixed(0) + 'k' : priceVal.toFixed(1);
+      
+      ctx.fillText(priceText, c.x, h - 22);
+      ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--muted').trim();
+      ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  });
+}
 
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', function(){
-      navigator.serviceWorker.register('./sw.js').catch(function(){});
-    });
-  }
-})();
+closeChart.onclick = function() { modal.classList.remove("show"); };
+modal.onclick = function(e) { if(e.target === modal) modal.classList.remove("show"); };
+
+// Инициализация
+switchTab('fiat');
+load();
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('./sw.js').catch(function(){});
+  });
+}
 </script>
 </body>
 </html>
