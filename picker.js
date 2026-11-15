@@ -1,6 +1,7 @@
 var picker = document.getElementById("currencyPicker");
 var pickerList = document.getElementById("pickerList");
 var pickerSearch = document.getElementById("pickerSearch");
+var openPickerBtn = document.getElementById("openPickerBtn");
 
 function openCurrencyPicker() {
   picker.classList.add("show");
@@ -9,6 +10,12 @@ function openCurrencyPicker() {
 
 function closeCurrencyPicker() {
   picker.classList.remove("show");
+}
+
+function updatePickerBtn() {
+  if (openPickerBtn) {
+    openPickerBtn.textContent = "Базовая: " + from + " ▾";
+  }
 }
 
 function renderPickerList(query) {
@@ -23,6 +30,7 @@ function renderPickerList(query) {
     div.className = "picker-item";
     div.onclick = function() {
       from = x.c;
+      updatePickerBtn();
       closeCurrencyPicker();
       renderTabs();
       renderOut();
