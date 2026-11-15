@@ -67,7 +67,7 @@ function switchTab(type){
   from=activeList[0].c;
   document.getElementById('btnFiat').className='filter-btn'+(type==='fiat'?' on':'');
   document.getElementById('btnCrypto').className='filter-btn'+(type==='crypto'?' on':'');
-  isTabsExpanded = false; // При переключении вкладки сворачиваем список
+  isTabsExpanded = false;
   renderTabs();renderOut();renderRates();
 }
 function num(str){if(!str)return 0;var v=parseFloat(String(str).replace(/\s/g,"").replace(",","."));return isFinite(v)?v:0;}
@@ -91,18 +91,14 @@ function toggleTabs() {
 function updateTabsView() {
   var btn = document.getElementById("expandBtn");
   if (activeList.length <= 8) {
-    // Если валют мало, кнопка не нужна, показываем всё
-    tabs.classList.remove("collapsed");
     tabs.classList.add("expanded");
     btn.classList.add("hidden");
   } else {
     btn.classList.remove("hidden");
     if (isTabsExpanded) {
-      tabs.classList.remove("collapsed");
       tabs.classList.add("expanded");
       btn.textContent = "Свернуть ▴";
     } else {
-      tabs.classList.add("collapsed");
       tabs.classList.remove("expanded");
       btn.textContent = "Показать все валюты ▾";
     }
