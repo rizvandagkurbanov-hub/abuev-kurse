@@ -35,7 +35,14 @@
   <div class="card">
     <label for="amt" data-i18n="amount">Сумма</label>
     <input id="amt" type="text" inputmode="decimal" value="" placeholder="0" autocomplete="off">
-    <div class="tabs collapsed" id="tabs"></div>
+    
+    <!-- Новая обертка для вкладок -->
+    <div class="tabs-wrapper" id="tabsWrapper">
+      <div class="tabs-inner">
+        <div class="tabs" id="tabs"></div>
+      </div>
+    </div>
+
     <button class="btn-expand" id="expandBtn" onclick="toggleTabs()">Показать все валюты ▾</button>
   </div>
   <div class="card" id="out">
@@ -64,7 +71,6 @@
   </div>
 </div>
 
-<!-- Таймер скрытия заставки прямо здесь, чтобы он сработал 100% -->
 <script>
   setTimeout(function() {
     var el = document.getElementById('splash');
