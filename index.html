@@ -37,9 +37,7 @@
     <div class="card">
       <label for="amt" data-i18n="amount">Сумма</label>
       <input id="amt" type="text" inputmode="decimal" value="" placeholder="0" autocomplete="off">
-      
-      <!-- Кнопка выбора валюты -->
-      <button class="btn-expand" onclick="openCurrencyPicker()">Выбрать валюту ▾</button>
+      <button class="btn-expand" id="openPickerBtn" onclick="openCurrencyPicker()">Базовая: USD ▾</button>
     </div>
 
     <div class="card" id="out">
@@ -47,12 +45,10 @@
         <button class="filter-btn on" id="btnFiat" onclick="switchTab('fiat')" data-i18n="tab_fiat">💵 Валюты</button>
         <button class="filter-btn" id="btnCrypto" onclick="switchTab('crypto')" data-i18n="tab_crypto">🪙 Крипта</button>
       </div>
-      
       <div class="search-box">
         <svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
         <input id="searchInput" type="text" placeholder="Поиск валюты..." autocomplete="off">
       </div>
-      
       <div id="listContainer"></div>
     </div>
   </div>
@@ -87,7 +83,6 @@
 
 <div id="toast" data-i18n="toast_copied">Скопировано!</div>
 
-<!-- Выезжающее меню выбора валюты -->
 <div class="currency-picker" id="currencyPicker">
   <div class="currency-picker-content">
     <div class="currency-picker-header">
