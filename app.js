@@ -1,4 +1,4 @@
-var currentLang='ru';
+var currentLang = localStorage.getItem("app_lang") || 'ru';
 var currentView='fiat',activeList=FIAT,from="USD";
 var searchQuery = "";
 var favorites = JSON.parse(localStorage.getItem("fx_favorites") || "[]");
@@ -19,6 +19,7 @@ function switchScreen(screenName, event) {
 
 function changeLang(lang){
   currentLang=lang;
+  localStorage.setItem("app_lang", lang);
   document.documentElement.lang=lang;
   document.documentElement.dir=(lang==='ar')?'rtl':'ltr';
   document.querySelectorAll('[data-i18n]').forEach(function(el){
@@ -26,10 +27,11 @@ function changeLang(lang){
     if(translations[lang] && translations[lang][key]) el.textContent=translations[lang][key];
   });
   amt.placeholder=(lang==='ar')?"٠":"0";
+  if(typeof updatePickerBtn === 'function') updatePickerBtn();
   renderTabs();renderOut();renderRates();
 }
 
-function switchTab(type){currentView=type;activeList=(type==='fiat')?FIAT:CRYPTO;from=activeList[0].c;document.getElementById('btnFiat').className='filter-btn'+(type==='fiat'?' on':'');document.getElementById('btnCrypto').className='filter-btn'+(type==='crypto'?' on':'');renderTabs();renderOut();renderRates();}
+function switchTab(type){currentView=type;activeList=(type==='fiat')?FIAT:CRYPTO;from=activeList[0].c;if(typeof updatePickerBtn === 'function') updatePickerBtn();document.getElementById('btnFiat').className='filter-btn'+(type==='fiat'?' on':'');document.getElementById('btnCrypto').className='filter-btn'+(type==='crypto'?' on':'');renderTabs();renderOut();renderRates();}
 function num(str){if(!str)return 0;var v=parseFloat(String(str).replace(/\s/g,"").replace(",","."));return isFinite(v)?v:0;}
 function fmt(v,d){return v.toLocaleString(currentLang==='ar'?'ar-EG':(currentLang==='hi'?'hi-IN':'ru-RU'),{minimumFractionDigits:d,maximumFractionDigits:d});}
 function conv(a,f,t){return a*rates[f]/rates[t];}
@@ -43,10 +45,12 @@ function toggleFavorite(currencyCode) {
   renderOut();
 }
 
-function renderTabs(){tabs.innerHTML="";activeList.forEach(function(x){var b=document.createElement("button");b.className="tab"+(x.c===from?" on":"");b.textContent=x.c;b.onclick=function(){from=x.c;renderTabs();renderOut();};tabs.appendChild(b);});}
+function renderTabs(){tabs.innerHTML="";activeList.forEach(function(x){var b=document.createElement("button");b.className="tab"+(x.c===from?" on":"");b.textContent=x.c;b.onclick=function(){from=x.c;if(typeof updatePickerBtn === 'function') updatePickerBtn();renderTabs();renderOut();};tabs.appendChild(b);});}
 
 function renderOut(){
   var a=num(amt.value);
+  var calcValue = (a === 0) ? 1 : a;
+  
   listContainer.innerHTML="";
   var filtered = activeList.filter(function(x){
     if (!searchQuery) return true;
@@ -59,7 +63,7 @@ function renderOut(){
   });
 
   filtered.forEach(function(x){
-    var v=conv(a,from,x.c);
+    var v=conv(calcValue,from,x.c);
     var vRub=(x.c==="RUB")?v:conv(v,x.c,"RUB");
     var one=conv(1,from,x.c);
     var d=document.createElement("div");
@@ -85,7 +89,7 @@ function renderOut(){
     var shareBtn = document.createElement("button");
     shareBtn.className = "btn-share";
     shareBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg> Поделиться';
-    shareBtn.onclick = function(e) { e.stopPropagation(); if(typeof shareResult === 'function') shareResult(fmt(a,2), from, x.c, fmt(v,2)); };
+    shareBtn.onclick = function(e) { e.stopPropagation(); if(typeof shareResult === 'function') shareResult(fmt(calcValue,2), from, x.c, fmt(v,2)); };
     if (x.c === "RUB") {
       rightPart.innerHTML = '<div class="val-main" data-curr=""></div>' + (x.c===from?'':'<div class="one">1 '+from+" = "+fmt(one,one<0.1?6:4)+" RUB</div>");
     } else {
@@ -133,5 +137,5 @@ function openChart(currency){modal.classList.add("show");chartTitle.innerHTML='<
 function drawChart(points,labels,w,h){const ctx=chartCanvas.getContext("2d");const pl=10,pr=10,pt=20,pb=30;const max=Math.max(...points);const min=Math.min(...points);const range=max-min||1;ctx.clearRect(0,0,w,h);let stepX=(w-pl-pr)/(points.length-1);let coords=points.map((p,i)=>({x:pl+i*stepX,y:h-pb-((p-min)/range)*(h-pt-pb)}));ctx.strokeStyle=getComputedStyle(document.body).getPropertyValue('--line').trim();ctx.lineWidth=1;for(let i=0;i<=3;i++){let y=pt+(h-pt-pb)*(i/3);ctx.beginPath();ctx.moveTo(pl,y);ctx.lineTo(w-pr,y);ctx.stroke();}let gradient=ctx.createLinearGradient(0,pt,0,h-pb);gradient.addColorStop(0,"rgba(124, 147, 255, 0.4)");gradient.addColorStop(1,"rgba(124, 147, 255, 0)");ctx.beginPath();ctx.strokeStyle=getComputedStyle(document.body).getPropertyValue('--accent').trim();ctx.lineWidth=3;ctx.lineJoin="round";ctx.lineCap="round";ctx.moveTo(coords[0].x,coords[0].y);for(let i=0;i<coords.length-1;i++){let midX=(coords[i].x+coords[i+1].x)/2;ctx.bezierCurveTo(midX,coords[i].y,midX,coords[i+1].y,coords[i+1].x,coords[i+1].y);}ctx.stroke();ctx.lineTo(coords[coords.length-1].x,h-pb);ctx.lineTo(coords[0].x,h-pb);ctx.closePath();ctx.fillStyle=gradient;ctx.fill();coords.forEach((c,i)=>{ctx.beginPath();ctx.arc(c.x,c.y,4,0,Math.PI*2);ctx.fillStyle=getComputedStyle(document.body).getPropertyValue('--card').trim();ctx.fill();ctx.strokeStyle=getComputedStyle(document.body).getPropertyValue('--accent').trim();ctx.lineWidth=2;ctx.stroke();});ctx.fillStyle=getComputedStyle(document.body).getPropertyValue('--muted').trim();ctx.font='10px Inter, sans-serif';ctx.textAlign="center";coords.forEach((c,i)=>{ctx.fillText(labels[i],c.x,h-10);ctx.fillStyle=getComputedStyle(document.body).getPropertyValue('--text').trim();ctx.font='bold 9px Inter, sans-serif';let priceVal=points[i];let priceText=priceVal>10000?(priceVal/1000).toFixed(0)+'k':priceVal.toFixed(1);ctx.fillText(priceText,c.x,h-22);ctx.fillStyle=getComputedStyle(document.body).getPropertyValue('--muted').trim();ctx.font='10px Inter, sans-serif';});}
 closeChart.onclick=function(){modal.classList.remove("show");};modal.onclick=function(e){if(e.target===modal)modal.classList.remove("show");};
 
-changeLang('ru');switchTab('fiat');load();
+changeLang(currentLang);switchTab('fiat');load();
 if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('./sw.js').catch(function(){});});}
