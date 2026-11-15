@@ -38,7 +38,8 @@
       <label for="amt" data-i18n="amount">Сумма</label>
       <input id="amt" type="text" inputmode="decimal" value="" placeholder="0" autocomplete="off">
       
-      <button class="btn-expand" onclick="openCurrencyPicker()" style="margin-top: 15px;">Выбрать валюту ▾</button>
+      <!-- Кнопка выбора валюты -->
+      <button class="btn-expand" onclick="openCurrencyPicker()">Выбрать валюту ▾</button>
     </div>
 
     <div class="card" id="out">
@@ -86,6 +87,7 @@
 
 <div id="toast" data-i18n="toast_copied">Скопировано!</div>
 
+<!-- Выезжающее меню выбора валюты -->
 <div class="currency-picker" id="currencyPicker">
   <div class="currency-picker-content">
     <div class="currency-picker-header">
