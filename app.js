@@ -5,24 +5,14 @@ var CRYPTO=[{c:"BTC",s:"₿",n:{ru:"Bitcoin",en:"Bitcoin",es:"Bitcoin",de:"Bitco
 var currentView='fiat',activeList=FIAT,from="USD";
 var searchQuery = "";
 var favorites = JSON.parse(localStorage.getItem("fx_favorites") || "[]");
-var isTabsExpanded = false;
 
 var DEF={USD:80.67,EUR:89.81,AED:21.96,RUB:1,CNY:12.08,JPY:0.51,TRY:1.62,KZT:0.16,GBP:102.5,CHF:91.2,INR:0.97,KRW:0.06,CAD:58.9,AUD:52.8,HKD:10.3,SGD:60.1,BRL:16.2,MXN:4.7,ZAR:4.3,BYN:25.1,UZS:0.0065,AMD:0.20,KGS:0.91,TJS:7.3,AZN:47.4,GEL:29.5,BTC:4500000,ETH:240000,USDT:80.6,BNB:40000,SOL:13000,XRP:50,TON:600,DOGE:12,ADA:35,TRX:7,AVAX:3000,SHIB:0.002,DOT:600,LTC:6500,BCH:20000,LINK:1200,MATIC:80,XLM:9,ATOM:800,UNI:700};
 var rates=Object.assign({},DEF);try{var s=localStorage.getItem("fx_rates");if(s){var p=JSON.parse(s);for(var k in DEF){if(p[k]>0)rates[k]=p[k];}}}catch(e){}rates.RUB=1;
 var amt=document.getElementById("amt"),tabs=document.getElementById("tabs"),rbox=document.getElementById("rates"),st=document.getElementById("st"),toast=document.getElementById("toast"),btn=document.getElementById("reset"),btnIcon=document.getElementById("btn-icon"),btnText=document.getElementById("btn-text"),listContainer=document.getElementById("listContainer"),modal=document.getElementById("chartModal"),closeChart=document.getElementById("closeChart"),chartCanvas=document.getElementById("chartCanvas"),chartTitle=document.getElementById("chartTitle");
 var searchInput = document.getElementById("searchInput");
-var tabsWrapper = document.getElementById("tabsWrapper");
 
 function changeLang(lang){currentLang=lang;document.documentElement.lang=lang;document.documentElement.dir=(lang==='ar')?'rtl':'ltr';document.querySelectorAll('[data-i18n]').forEach(function(el){var key=el.getAttribute('data-i18n');if(t[lang]&&t[lang][key])el.textContent=t[lang][key];});amt.placeholder=(lang==='ar')?"٠":"0";renderTabs();renderOut();renderRates();}
-function switchTab(type){
-  currentView=type;
-  activeList=(type==='fiat')?FIAT:CRYPTO;
-  from=activeList[0].c;
-  document.getElementById('btnFiat').className='filter-btn'+(type==='fiat'?' on':'');
-  document.getElementById('btnCrypto').className='filter-btn'+(type==='crypto'?' on':'');
-  isTabsExpanded = false;
-  renderTabs();renderOut();renderRates();
-}
+function switchTab(type){currentView=type;activeList=(type==='fiat')?FIAT:CRYPTO;from=activeList[0].c;document.getElementById('btnFiat').className='filter-btn'+(type==='fiat'?' on':'');document.getElementById('btnCrypto').className='filter-btn'+(type==='crypto'?' on':'');renderTabs();renderOut();renderRates();}
 function num(str){if(!str)return 0;var v=parseFloat(String(str).replace(/\s/g,"").replace(",","."));return isFinite(v)?v:0;}
 function fmt(v,d){return v.toLocaleString(currentLang==='ar'?'ar-EG':(currentLang==='hi'?'hi-IN':'ru-RU'),{minimumFractionDigits:d,maximumFractionDigits:d});}
 function conv(a,f,t){return a*rates[f]/rates[t];}
@@ -36,33 +26,7 @@ function toggleFavorite(currencyCode) {
   renderOut();
 }
 
-function toggleTabs() {
-  isTabsExpanded = !isTabsExpanded;
-  updateTabsView();
-}
-
-function updateTabsView() {
-  var btn = document.getElementById("expandBtn");
-  if (isTabsExpanded) {
-    tabsWrapper.classList.add("expanded");
-    btn.textContent = "Свернуть ▴";
-  } else {
-    tabsWrapper.classList.remove("expanded");
-    btn.textContent = "Показать все валюты ▾";
-  }
-}
-
-function renderTabs(){
-  tabs.innerHTML="";
-  activeList.forEach(function(x){
-    var b=document.createElement("button");
-    b.className="tab"+(x.c===from?" on":"");
-    b.textContent=x.c;
-    b.onclick=function(){from=x.c;renderTabs();renderOut();};
-    tabs.appendChild(b);
-  });
-  updateTabsView();
-}
+function renderTabs(){tabs.innerHTML="";activeList.forEach(function(x){var b=document.createElement("button");b.className="tab"+(x.c===from?" on":"");b.textContent=x.c;b.onclick=function(){from=x.c;renderTabs();renderOut();};tabs.appendChild(b);});}
 
 function renderOut(){
   var a=num(amt.value);
