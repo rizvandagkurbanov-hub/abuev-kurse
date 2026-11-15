@@ -10,12 +10,10 @@
 <link rel="icon" type="image/png" href="./logo.png">
 <link rel="apple-touch-icon" href="./logo.png">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<!-- Подключаем наши стили -->
 <link rel="stylesheet" href="./style.css">
 </head>
 <body>
 
-<!-- Экран загрузки -->
 <div id="splash">
   <img src="./logo.png" alt="Logo" class="splash-logo">
   <div class="splash-spinner"></div>
@@ -38,7 +36,8 @@
   <div class="card">
     <label for="amt" data-i18n="amount">Сумма</label>
     <input id="amt" type="text" inputmode="decimal" value="" placeholder="0" autocomplete="off">
-    <div class="tabs" id="tabs"></div>
+    <div class="tabs collapsed" id="tabs"></div>
+    <button class="btn-expand" id="expandBtn" onclick="toggleTabs()">Показать все валюты ▾</button>
   </div>
 
   <div class="card" id="out">
@@ -47,7 +46,6 @@
       <button class="filter-btn" id="btnCrypto" onclick="switchTab('crypto')" data-i18n="tab_crypto">🪙 Крипта</button>
     </div>
     
-    <!-- Строка поиска -->
     <div class="search-box">
       <svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
       <input id="searchInput" type="text" placeholder="Поиск валюты..." autocomplete="off">
@@ -73,7 +71,6 @@
   </div>
 </div>
 
-<!-- Подключаем наши скрипты -->
 <script src="./update.js"></script>
 <script src="./app.js"></script>
 </body>
