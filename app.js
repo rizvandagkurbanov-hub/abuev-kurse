@@ -91,18 +91,12 @@ function toggleTabs() {
 
 function updateTabsView() {
   var btn = document.getElementById("expandBtn");
-  if (activeList.length <= 8) {
+  if (isTabsExpanded) {
     tabsWrapper.classList.add("expanded");
-    btn.style.display = "none";
+    btn.textContent = "Свернуть ▴";
   } else {
-    btn.style.display = "block";
-    if (isTabsExpanded) {
-      tabsWrapper.classList.add("expanded");
-      btn.textContent = "Свернуть ▴";
-    } else {
-      tabsWrapper.classList.remove("expanded");
-      btn.textContent = "Показать все валюты ▾";
-    }
+    tabsWrapper.classList.remove("expanded");
+    btn.textContent = "Показать все валюты ▾";
   }
 }
 
