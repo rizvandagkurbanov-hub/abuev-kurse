@@ -1,20 +1,10 @@
-// 1. Вибро-отклик
-function haptic() {
-  if (navigator.vibrate) navigator.vibrate(10);
-}
-
-// 2. Кнопка Поделиться (через системное меню)
+function haptic() { if (navigator.vibrate) navigator.vibrate(10); }
 function shareResult(amount, fromCur, toCur, result) {
   haptic();
   var text = amount + " " + fromCur + " = " + result + " " + toCur;
-  if (navigator.share) {
-    navigator.share({ title: 'Abuev Конвертер', text: text, url: window.location.href }).catch(console.error);
-  } else {
-    copyText(text);
-  }
+  if (navigator.share) { navigator.share({ title: 'Abuev Конвертер', text: text, url: window.location.href }).catch(console.error); } 
+  else { copyText(text); }
 }
-
-// 3. Анимация цифр (перетекание)
 function animateValue(obj, start, end, duration, suffix) {
   let startTimestamp = null;
   const step = (timestamp) => {
