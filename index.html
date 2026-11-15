@@ -14,55 +14,82 @@
 </head>
 <body>
 
+<!-- Экран загрузки -->
 <div id="splash">
   <img src="./logo.png" alt="Logo" class="splash-logo">
   <div class="splash-spinner"></div>
 </div>
 
 <main>
-  <div class="header">
-    <div class="logo-block">
-      <img src="./logo.png" alt="Abuev Logo" class="logo-img">
-      <div>
-        <h1 data-i18n="app_title">Abuev</h1>
-        <p class="sub" data-i18n="app_subtitle">Конвертер валют и криптовалют</p>
+  <!-- ЭКРАН 1: КОНВЕРТЕР -->
+  <div id="screen-converter" class="screen active">
+    <div class="header">
+      <div class="logo-block">
+        <img src="./logo.png" alt="Abuev Logo" class="logo-img">
+        <div>
+          <h1 data-i18n="app_title">Abuev</h1>
+          <p class="sub" data-i18n="app_subtitle">Конвертер валют и криптовалют</p>
+        </div>
+      </div>
+      <select class="lang-select" id="langSelect" onchange="changeLang(this.value)">
+        <option value="ru">RU 🇷🇺</option><option value="en">EN 🇬🇧</option><option value="es">ES 🇪🇸</option><option value="de">DE 🇩🇪</option><option value="fr">FR 🇫🇷</option><option value="zh">ZH 🇨🇳</option><option value="ja">JA 🇯🇵</option><option value="pt">PT 🇵🇹</option><option value="hi">HI 🇮🇳</option><option value="ar">AR 🇸🇦</option>
+      </select>
+    </div>
+    
+    <div class="card">
+      <label for="amt" data-i18n="amount">Сумма</label>
+      <input id="amt" type="text" inputmode="decimal" value="" placeholder="0" autocomplete="off">
+      <div class="tabs" id="tabs"></div>
+    </div>
+
+    <div class="card" id="out">
+      <div class="filters">
+        <button class="filter-btn on" id="btnFiat" onclick="switchTab('fiat')" data-i18n="tab_fiat">💵 Валюты</button>
+        <button class="filter-btn" id="btnCrypto" onclick="switchTab('crypto')" data-i18n="tab_crypto">🪙 Крипта</button>
+      </div>
+      
+      <div class="search-box">
+        <svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input id="searchInput" type="text" placeholder="Поиск валюты..." autocomplete="off">
+      </div>
+      
+      <div id="listContainer"></div>
+    </div>
+  </div>
+
+  <!-- ЭКРАН 2: КУРСЫ -->
+  <div id="screen-rates" class="screen">
+    <div class="header">
+      <div class="logo-block">
+        <div>
+          <h1 data-i18n="rates_title">Курсы</h1>
+          <p class="sub" data-i18n="rates_subtitle">Актуальные курсы к рублю</p>
+        </div>
       </div>
     </div>
-    <select class="lang-select" id="langSelect" onchange="changeLang(this.value)">
-      <option value="ru">RU 🇷🇺</option><option value="en">EN 🇬🇧</option><option value="es">ES 🇪🇸</option><option value="de">DE 🇩🇪</option><option value="fr">FR 🇫🇷</option><option value="zh">ZH 🇨🇳</option><option value="ja">JA 🇯🇵</option><option value="pt">PT 🇵🇹</option><option value="hi">HI 🇮🇳</option><option value="ar">AR 🇸🇦</option>
-    </select>
-  </div>
-  
-  <div class="card">
-    <label for="amt" data-i18n="amount">Сумма</label>
-    <input id="amt" type="text" inputmode="decimal" value="" placeholder="0" autocomplete="off">
-    <div class="tabs" id="tabs"></div>
-  </div>
-
-  <div class="card" id="out">
-    <div class="filters">
-      <button class="filter-btn on" id="btnFiat" onclick="switchTab('fiat')" data-i18n="tab_fiat">💵 Валюты</button>
-      <button class="filter-btn" id="btnCrypto" onclick="switchTab('crypto')" data-i18n="tab_crypto">🪙 Крипта</button>
+    <div class="card">
+      <div class="rates" id="rates"></div>
+      <div class="row"><button class="btn" id="reset"><span id="btn-icon"></span><span id="btn-text" data-i18n="btn_update">Обновить курс</span></button></div>
+      <p class="note" id="st" data-i18n="status_loading">Загружаю курс…</p>
     </div>
-    
-    <div class="search-box">
-      <svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-      <input id="searchInput" type="text" placeholder="Поиск валюты..." autocomplete="off">
-    </div>
-    
-    <div id="listContainer"></div>
-  </div>
-
-  <div class="card">
-    <p class="h2" data-i18n="rates_to_rub">Курсы к рублю</p>
-    <div class="rates" id="rates"></div>
-    <div class="row"><button class="btn" id="reset"><span id="btn-icon"></span><span id="btn-text" data-i18n="btn_update">Обновить курс</span></button></div>
-    <p class="note" id="st" data-i18n="status_loading">Загружаю курс…</p>
   </div>
 </main>
 
+<!-- Нижняя навигация -->
+<div class="bottom-nav">
+  <button class="nav-item active" onclick="switchScreen('converter', event)">
+    <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
+    <span data-i18n="nav_conv">Конвертер</span>
+  </button>
+  <button class="nav-item" onclick="switchScreen('rates', event)">
+    <svg viewBox="0 0 24 24"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>
+    <span data-i18n="nav_rates">Курсы</span>
+  </button>
+</div>
+
 <div id="toast" data-i18n="toast_copied">Скопировано!</div>
 
+<!-- Модальное окно графика -->
 <div class="modal" id="chartModal">
   <div class="modal-content">
     <div class="modal-header"><div class="modal-title" id="chartTitle">График</div><button class="close-btn" id="closeChart">&times;</button></div>
@@ -77,6 +104,7 @@
   }, 800);
 </script>
 
+<script src="./data.js"></script>
 <script src="./update.js"></script>
 <script src="./app.js"></script>
 </body>
