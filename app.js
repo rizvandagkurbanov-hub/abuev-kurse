@@ -22,10 +22,4 @@ var FIAT=[
   {c:"ZAR",s:"R",n:{ru:"Южноафриканский рэнд",en:"South African Rand",es:"Rand sudafricano",de:"Südafrikanischer Rand",fr:"Rand sud-africain",zh:"南非兰特",ja:"南アフリカランド",pt:"Rand sul-africano",hi:"दक्षिण अफ्रीकी रैंड",ar:"راند جنوب أفريقي"}},
   {c:"BYN",s:"Br",n:{ru:"Белорусский рубль",en:"Belarusian Ruble",es:"Rublo bielorruso",de:"Belarussischer Rubel",fr:"Rouble biélorusse",zh:"白俄罗斯卢布",ja:"ベラルーシルーブル",pt:"Rublo bielorrusso",hi:"बेलारूसी रूबल",ar:"روبل بيلاروسي"}},
   {c:"UZS",s:"so'm",n:{ru:"Узбекский сум",en:"Uzbekistani Som",es:"Som uzbeko",de:"Usbekischer Sum",fr:"Sum ouzbek",zh:"乌兹别克斯坦苏姆",ja:"ウズベキスタンスム",pt:"Som uzbeque",hi:"उज़्बेक सोम",ar:"سوم أوزبكي"}},
-  {c:"AMD",s:"֏",n:{ru:"Армянский драм",en:"Armenian Dram",es:"Dram armenio",de:"Armenischer Dram",fr:"Dram arménien",zh:"亚美尼亚德拉姆",ja:"アルメニアドラム",pt:"Dram armênio",hi:"आर्मेनियाई द्राम",ar:"درام أرميني"}}
-];
-var CRYPTO=[
-  {c:"BTC",s:"₿",n:{ru:"Bitcoin",en:"Bitcoin",es:"Bitcoin",de:"Bitcoin",fr:"Bitcoin",zh:"比特币",ja:"ビットコイン",pt:"Bitcoin",hi:"बिटकॉइन",ar:"بيتكوين"}},
-  {c:"ETH",s:"Ξ",n:{ru:"Ethereum",en:"Ethereum",es:"Ethereum",de:"Ethereum",fr:"Ethereum",zh:"以太坊",ja:"イーサリアム",pt:"Ethereum",hi:"एथेरियम",ar:"إيثريوم"}},
-  {c:"USDT",s:"₮",n:{ru:"Tether",en:"Tether",es:"Tether",de:"Tether",fr:"Tether",zh:"泰达币",ja:"テザー",pt:"Tether",hi:"टेदर",ar:"تيثر"}},
-  {c:"BNB",s:"B",n:{ru:"Binance Coin",en:"Binance Coin",es:"Binance Coin",de:"Binance Coin",fr:"Binance Coin",zh:"币安币",ja:"バイナンスコイン",pt:"Binance Coin",hi:"बाइनेंस कॉइन
+  {c:"AMD",s:"֏",n:{ru:"Армянский драм",en:"Armenian Dram",es:"Dram armenio",de:"Arm
