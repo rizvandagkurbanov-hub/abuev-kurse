@@ -14,7 +14,6 @@
 </head>
 <body>
 
-<!-- Экран загрузки -->
 <div id="splash">
   <img src="./logo.png" alt="Logo" class="splash-logo">
   <div class="splash-spinner"></div>
@@ -75,7 +74,6 @@
   </div>
 </main>
 
-<!-- Нижняя навигация -->
 <div class="bottom-nav">
   <button class="nav-item active" onclick="switchScreen('converter', event)">
     <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
@@ -89,7 +87,6 @@
 
 <div id="toast" data-i18n="toast_copied">Скопировано!</div>
 
-<!-- Модальное окно графика -->
 <div class="modal" id="chartModal">
   <div class="modal-content">
     <div class="modal-header"><div class="modal-title" id="chartTitle">График</div><button class="close-btn" id="closeChart">&times;</button></div>
@@ -104,6 +101,7 @@
   }, 800);
 </script>
 
+<script src="./lang.js"></script>
 <script src="./data.js"></script>
 <script src="./update.js"></script>
 <script src="./app.js"></script>
