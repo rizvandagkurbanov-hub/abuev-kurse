@@ -20,7 +20,6 @@
 </div>
 
 <main>
-  <!-- ЭКРАН 1: КОНВЕРТЕР -->
   <div id="screen-converter" class="screen active">
     <div class="header">
       <div class="logo-block">
@@ -38,7 +37,8 @@
     <div class="card">
       <label for="amt" data-i18n="amount">Сумма</label>
       <input id="amt" type="text" inputmode="decimal" value="" placeholder="0" autocomplete="off">
-      <div class="tabs" id="tabs"></div>
+      
+      <button class="btn-expand" onclick="openCurrencyPicker()" style="margin-top: 15px;">Выбрать валюту ▾</button>
     </div>
 
     <div class="card" id="out">
@@ -56,7 +56,6 @@
     </div>
   </div>
 
-  <!-- ЭКРАН 2: КУРСЫ -->
   <div id="screen-rates" class="screen">
     <div class="header">
       <div class="logo-block">
@@ -87,6 +86,20 @@
 
 <div id="toast" data-i18n="toast_copied">Скопировано!</div>
 
+<div class="currency-picker" id="currencyPicker">
+  <div class="currency-picker-content">
+    <div class="currency-picker-header">
+      <h3>Выберите валюту</h3>
+      <button class="close-btn" onclick="closeCurrencyPicker()">&times;</button>
+    </div>
+    <div class="search-box" style="margin: 0 16px 16px;">
+      <svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      <input id="pickerSearch" type="text" placeholder="Поиск валюты..." autocomplete="off">
+    </div>
+    <div class="currency-picker-list" id="pickerList"></div>
+  </div>
+</div>
+
 <div class="modal" id="chartModal">
   <div class="modal-content">
     <div class="modal-header"><div class="modal-title" id="chartTitle">График</div><button class="close-btn" id="closeChart">&times;</button></div>
@@ -104,6 +117,7 @@
 <script src="./lang.js"></script>
 <script src="./data.js"></script>
 <script src="./update.js"></script>
+<script src="./picker.js"></script>
 <script src="./app.js"></script>
 </body>
 </html>
