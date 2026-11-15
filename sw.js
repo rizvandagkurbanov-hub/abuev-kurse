@@ -1,4 +1,4 @@
-const CACHE = 'abuev-v26';
+const CACHE = 'abuev-v27';
 const ASSETS = ['./', './index.html'];
 
 self.addEventListener('install', e => {
