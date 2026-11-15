@@ -22,7 +22,7 @@ label{font-size:13px;color:var(--muted);display:block;margin-bottom:8px;font-wei
 input{width:100%;font-family:'Inter',sans-serif;font-size:32px;font-weight:700;padding:12px 16px;border-radius:14px;border:2px solid transparent;background:var(--bg);color:var(--text);outline:none;transition:all 0.3s;}
 input:focus{border-color:var(--accent);background:var(--card);box-shadow:0 0 0 4px var(--accent-soft);}
 
-/* Плавное раскрытие вкладок */
+/* Анимация раскрытия списка валют */
 .tabs-wrapper {
   display: grid;
   grid-template-rows: 0fr;
