@@ -22,7 +22,11 @@ var FIAT=[
   {c:"ZAR",s:"R",n:{ru:"Южноафриканский рэнд",en:"South African Rand",es:"Rand sudafricano",de:"Südafrikanischer Rand",fr:"Rand sud-africain",zh:"南非兰特",ja:"南アフリカランド",pt:"Rand sul-africano",hi:"दक्षिण अफ्रीकी रैंड",ar:"راند جنوب أفريقي"}},
   {c:"BYN",s:"Br",n:{ru:"Белорусский рубль",en:"Belarusian Ruble",es:"Rublo bielorruso",de:"Belarussischer Rubel",fr:"Rouble biélorusse",zh:"白俄罗斯卢布",ja:"ベラルーシルーブル",pt:"Rublo bielorrusso",hi:"बेलारूसी रूबल",ar:"روبل بيلاروسي"}},
   {c:"UZS",s:"so'm",n:{ru:"Узбекский сум",en:"Uzbekistani Som",es:"Som uzbeko",de:"Usbekischer Sum",fr:"Sum ouzbek",zh:"乌兹别克斯坦苏姆",ja:"ウズベキスタンスム",pt:"Som uzbeque",hi:"उज़्बेक सोम",ar:"سوم أوزبكي"}},
-  {c:"AMD",s:"֏",n:{ru:"Армянский драм",en:"Armenian Dram",es:"Dram armenio",de:"Armenischer Dram",fr:"Dram arménien",zh:"亚美尼亚德拉姆",ja:"アルメニアドラム",pt:"Dram armênio",hi:"आर्मेनियाई द्राम",ar:"درام أرميني"}}
+  {c:"AMD",s:"֏",n:{ru:"Армянский драм",en:"Armenian Dram",es:"Dram armenio",de:"Armenischer Dram",fr:"Dram arménien",zh:"亚美尼亚德拉姆",ja:"アルメニアドラム",pt:"Dram armênio",hi:"आर्मेनियाई द्राम",ar:"درام أرميني"}},
+  {c:"KGS",s:"с",n:{ru:"Киргизский сом",en:"Kyrgyzstani Som",es:"Som kirguís",de:"Kirgisischer Som",fr:"Som kirghize",zh:"吉尔吉斯斯坦索姆",ja:"キルギスソム",pt:"Som quirguiz",hi:"किर्गिस्तानी सोम",ar:"سوم قيرغيزستاني"}},
+  {c:"TJS",s:"SM",n:{ru:"Таджикский сомони",en:"Tajikistani Somoni",es:"Somoni tayiko",de:"Tadschikischer Somoni",fr:"Somoni tadjik",zh:"塔吉克斯坦索莫尼",ja:"タジキスタンソモニ",pt:"Somoni tajique",hi:"ताजिकिस्तानी सोमोनी",ar:"سوموني طاجيكي"}},
+  {c:"AZN",s:"₼",n:{ru:"Азербайджанский манат",en:"Azerbaijani Manat",es:"Manat azerbaiyano",de:"Aserbaidschanischer Manat",fr:"Manat azerbaïdjanais",zh:"阿塞拜疆马纳特",ja:"アゼルバイジャンマナト",pt:"Manat azerbaijano",hi:"अज़रबैजानी मनात",ar:"مانات أذربيجاني"}},
+  {c:"GEL",s:"₾",n:{ru:"Грузинский лари",en:"Georgian Lari",es:"Lari georgiano",de:"Georgischer Lari",fr:"Lari géorgien",zh:"格鲁吉亚拉里",ja:"ジョージアラリ",pt:"Lari georgiano",hi:"जॉर्जियाई लारी",ar:"لاري جورجي"}}
 ];
 var CRYPTO=[
   {c:"BTC",s:"₿",n:{ru:"Bitcoin",en:"Bitcoin",es:"Bitcoin",de:"Bitcoin",fr:"Bitcoin",zh:"比特币",ja:"ビットコイン",pt:"Bitcoin",hi:"बिटकॉइन",ar:"بيتكوين"}},
@@ -32,20 +36,40 @@ var CRYPTO=[
   {c:"SOL",s:"◎",n:{ru:"Solana",en:"Solana",es:"Solana",de:"Solana",fr:"Solana",zh:"索拉纳",ja:"ソラナ",pt:"Solana",hi:"सोलाना",ar:"سولانا"}},
   {c:"XRP",s:"XRP",n:{ru:"Ripple",en:"Ripple",es:"Ripple",de:"Ripple",fr:"Ripple",zh:"瑞波币",ja:"リップル",pt:"Ripple",hi:"रिपल",ar:"ريبل"}},
   {c:"TON",s:"💎",n:{ru:"Toncoin",en:"Toncoin",es:"Toncoin",de:"Toncoin",fr:"Toncoin",zh:"Toncoin",ja:"トンコイン",pt:"Toncoin",hi:"टनकॉइन",ar:"تون كوين"}},
-  {c:"DOGE",s:"Ð",n:{ru:"Dogecoin",en:"Dogecoin",es:"Dogecoin",de:"Dogecoin",fr:"Dogecoin",zh:"狗狗币",ja:"ドージコイン",pt:"Dogecoin",hi:"डॉगकॉइन",ar:"دوجكوين"}}
+  {c:"DOGE",s:"Ð",n:{ru:"Dogecoin",en:"Dogecoin",es:"Dogecoin",de:"Dogecoin",fr:"Dogecoin",zh:"狗狗币",ja:"ドージコイン",pt:"Dogecoin",hi:"डॉगकॉइन",ar:"دوجكوين"}},
+  {c:"ADA",s:"₳",n:{ru:"Cardano",en:"Cardano",es:"Cardano",de:"Cardano",fr:"Cardano",zh:"艾达币",ja:"カルダノ",pt:"Cardano",hi:"कार्डानो",ar:"كاردانو"}},
+  {c:"TRX",s:"T",n:{ru:"TRON",en:"TRON",es:"TRON",de:"TRON",fr:"TRON",zh:"波场",ja:"トロン",pt:"TRON",hi:"ट्रॉन",ar:"ترون"}},
+  {c:"AVAX",s:"A",n:{ru:"Avalanche",en:"Avalanche",es:"Avalanche",de:"Avalanche",fr:"Avalanche",zh:"雪崩",ja:"アバランチ",pt:"Avalanche",hi:"एवलांच",ar:"أفالانش"}},
+  {c:"SHIB",s:"S",n:{ru:"Shiba Inu",en:"Shiba Inu",es:"Shiba Inu",de:"Shiba Inu",fr:"Shiba Inu",zh:"柴犬币",ja:"シバイヌ",pt:"Shiba Inu",hi:"शीबा इनु",ar:"شيبا إينو"}},
+  {c:"DOT",s:"•",n:{ru:"Polkadot",en:"Polkadot",es:"Polkadot",de:"Polkadot",fr:"Polkadot",zh:"波卡",ja:"ポルカドット",pt:"Polkadot",hi:"पोल्काडॉट",ar:"بولكادوت"}},
+  {c:"LTC",s:"Ł",n:{ru:"Litecoin",en:"Litecoin",es:"Litecoin",de:"Litecoin",fr:"Litecoin",zh:"莱特币",ja:"ライトコイン",pt:"Litecoin",hi:"लाइटकॉइन",ar:"لايتكوين"}},
+  {c:"BCH",s:"B",n:{ru:"Bitcoin Cash",en:"Bitcoin Cash",es:"Bitcoin Cash",de:"Bitcoin Cash",fr:"Bitcoin Cash",zh:"比特币现金",ja:"ビットコインキャッシュ",pt:"Bitcoin Cash",hi:"बिटकॉइन कैश",ar:"بيتكوين كاش"}},
+  {c:"LINK",s:"L",n:{ru:"Chainlink",en:"Chainlink",es:"Chainlink",de:"Chainlink",fr:"Chainlink",zh:"链环",ja:"チェーンリンク",pt:"Chainlink",hi:"चेनलिंक",ar:"شينلينك"}},
+  {c:"MATIC",s:"M",n:{ru:"Polygon",en:"Polygon",es:"Polygon",de:"Polygon",fr:"Polygon",zh:"多边形",ja:"ポリゴン",pt:"Polygon",hi:"पॉलीगॉन",ar:"بوليجون"}},
+  {c:"XLM",s:"X",n:{ru:"Stellar",en:"Stellar",es:"Stellar",de:"Stellar",fr:"Stellar",zh:"恒星币",ja:"ステラ",pt:"Stellar",hi:"स्टेलर",ar:"ستيلار"}},
+  {c:"ATOM",s:"A",n:{ru:"Cosmos",en:"Cosmos",es:"Cosmos",de:"Cosmos",fr:"Cosmos",zh:"宇宙币",ja:"コスモス",pt:"Cosmos",hi:"कॉस्मोस",ar:"كوزموس"}},
+  {c:"UNI",s:"U",n:{ru:"Uniswap",en:"Uniswap",es:"Uniswap",de:"Uniswap",fr:"Uniswap",zh:"Uniswap",ja:"ユニスワップ",pt:"Uniswap",hi:"यूनिस्वैप",ar:"يونيسواب"}}
 ];
 var currentView='fiat',activeList=FIAT,from="USD";
 var searchQuery = "";
 var favorites = JSON.parse(localStorage.getItem("fx_favorites") || "[]");
 var isTabsExpanded = false;
 
-var DEF={USD:80.67,EUR:89.81,AED:21.96,RUB:1,CNY:12.08,JPY:0.51,TRY:1.62,KZT:0.16,GBP:102.5,CHF:91.2,INR:0.97,KRW:0.06,CAD:58.9,AUD:52.8,HKD:10.3,SGD:60.1,BRL:16.2,MXN:4.7,ZAR:4.3,BYN:25.1,UZS:0.0065,AMD:0.20,BTC:4500000,ETH:240000,USDT:80.6,BNB:40000,SOL:13000,XRP:50,TON:600,DOGE:12};
+var DEF={USD:80.67,EUR:89.81,AED:21.96,RUB:1,CNY:12.08,JPY:0.51,TRY:1.62,KZT:0.16,GBP:102.5,CHF:91.2,INR:0.97,KRW:0.06,CAD:58.9,AUD:52.8,HKD:10.3,SGD:60.1,BRL:16.2,MXN:4.7,ZAR:4.3,BYN:25.1,UZS:0.0065,AMD:0.20,KGS:0.91,TJS:7.3,AZN:47.4,GEL:29.5,BTC:4500000,ETH:240000,USDT:80.6,BNB:40000,SOL:13000,XRP:50,TON:600,DOGE:12,ADA:35,TRX:7,AVAX:3000,SHIB:0.002,DOT:600,LTC:6500,BCH:20000,LINK:1200,MATIC:80,XLM:9,ATOM:800,UNI:700};
 var rates=Object.assign({},DEF);try{var s=localStorage.getItem("fx_rates");if(s){var p=JSON.parse(s);for(var k in DEF){if(p[k]>0)rates[k]=p[k];}}}catch(e){}rates.RUB=1;
 var amt=document.getElementById("amt"),tabs=document.getElementById("tabs"),rbox=document.getElementById("rates"),st=document.getElementById("st"),toast=document.getElementById("toast"),btn=document.getElementById("reset"),btnIcon=document.getElementById("btn-icon"),btnText=document.getElementById("btn-text"),listContainer=document.getElementById("listContainer"),modal=document.getElementById("chartModal"),closeChart=document.getElementById("closeChart"),chartCanvas=document.getElementById("chartCanvas"),chartTitle=document.getElementById("chartTitle");
 var searchInput = document.getElementById("searchInput");
 
 function changeLang(lang){currentLang=lang;document.documentElement.lang=lang;document.documentElement.dir=(lang==='ar')?'rtl':'ltr';document.querySelectorAll('[data-i18n]').forEach(function(el){var key=el.getAttribute('data-i18n');if(t[lang]&&t[lang][key])el.textContent=t[lang][key];});amt.placeholder=(lang==='ar')?"٠":"0";renderTabs();renderOut();renderRates();}
-function switchTab(type){currentView=type;activeList=(type==='fiat')?FIAT:CRYPTO;from=activeList[0].c;document.getElementById('btnFiat').className='filter-btn'+(type==='fiat'?' on':'');document.getElementById('btnCrypto').className='filter-btn'+(type==='crypto'?' on':'');renderTabs();renderOut();renderRates();}
+function switchTab(type){
+  currentView=type;
+  activeList=(type==='fiat')?FIAT:CRYPTO;
+  from=activeList[0].c;
+  document.getElementById('btnFiat').className='filter-btn'+(type==='fiat'?' on':'');
+  document.getElementById('btnCrypto').className='filter-btn'+(type==='crypto'?' on':'');
+  isTabsExpanded = false; // При переключении вкладки сворачиваем список
+  renderTabs();renderOut();renderRates();
+}
 function num(str){if(!str)return 0;var v=parseFloat(String(str).replace(/\s/g,"").replace(",","."));return isFinite(v)?v:0;}
 function fmt(v,d){return v.toLocaleString(currentLang==='ar'?'ar-EG':(currentLang==='hi'?'hi-IN':'ru-RU'),{minimumFractionDigits:d,maximumFractionDigits:d});}
 function conv(a,f,t){return a*rates[f]/rates[t];}
@@ -61,12 +85,27 @@ function toggleFavorite(currencyCode) {
 
 function toggleTabs() {
   isTabsExpanded = !isTabsExpanded;
-  if (isTabsExpanded) {
+  updateTabsView();
+}
+
+function updateTabsView() {
+  var btn = document.getElementById("expandBtn");
+  if (activeList.length <= 8) {
+    // Если валют мало, кнопка не нужна, показываем всё
     tabs.classList.remove("collapsed");
-    document.getElementById("expandBtn").textContent = "Свернуть ▴";
+    tabs.classList.add("expanded");
+    btn.classList.add("hidden");
   } else {
-    tabs.classList.add("collapsed");
-    document.getElementById("expandBtn").textContent = "Показать все валюты ▾";
+    btn.classList.remove("hidden");
+    if (isTabsExpanded) {
+      tabs.classList.remove("collapsed");
+      tabs.classList.add("expanded");
+      btn.textContent = "Свернуть ▴";
+    } else {
+      tabs.classList.add("collapsed");
+      tabs.classList.remove("expanded");
+      btn.textContent = "Показать все валюты ▾";
+    }
   }
 }
 
@@ -79,7 +118,7 @@ function renderTabs(){
     b.onclick=function(){from=x.c;renderTabs();renderOut();};
     tabs.appendChild(b);
   });
-  if(!isTabsExpanded) tabs.classList.add("collapsed");
+  updateTabsView();
 }
 
 function renderOut(){
