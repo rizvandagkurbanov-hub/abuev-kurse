@@ -1,4 +1,3 @@
-var t={ru:{app_title:"Abuev",app_subtitle:"Конвертер валют и криптовалют",amount:"Сумма",tab_fiat:"💵 Валюты",tab_crypto:"🪙 Крипта",rates_to_rub:"Курсы к рублю",btn_update:"Обновить курс",btn_loading:"Загрузка...",status_loading:"Обновляю курсы…",status_updated:"Курсы обновлены",status_error:"Нет связи. Используется сохранённый курс.",toast_copied:"Скопировано!",nav_conv:"Конвертер",nav_rates:"Курсы",rates_title:"Курсы",rates_subtitle:"Актуальные курсы к рублю"},en:{app_title:"Abuev",app_subtitle:"Currency & Crypto Converter",amount:"Amount",tab_fiat:"💵 Currencies",tab_crypto:"🪙 Crypto",rates_to_rub:"Rates to RUB",btn_update:"Update rates",btn_loading:"Loading...",status_loading:"Updating rates…",status_updated:"Rates updated",status_error:"Offline. Using saved rates.",toast_copied:"Copied!",nav_conv:"Converter",nav_rates:"Rates",rates_title:"Rates",rates_subtitle:"Current rates to RUB"}};
 var currentLang='ru';
 var currentView='fiat',activeList=FIAT,from="USD";
 var searchQuery = "";
@@ -9,7 +8,6 @@ var rates=Object.assign({},DEF);try{var s=localStorage.getItem("fx_rates");if(s)
 var amt=document.getElementById("amt"),tabs=document.getElementById("tabs"),rbox=document.getElementById("rates"),st=document.getElementById("st"),toast=document.getElementById("toast"),btn=document.getElementById("reset"),btnIcon=document.getElementById("btn-icon"),btnText=document.getElementById("btn-text"),listContainer=document.getElementById("listContainer"),modal=document.getElementById("chartModal"),closeChart=document.getElementById("closeChart"),chartCanvas=document.getElementById("chartCanvas"),chartTitle=document.getElementById("chartTitle");
 var searchInput = document.getElementById("searchInput");
 
-// Переключение экранов
 function switchScreen(screenName, event) {
   if(navigator.vibrate) navigator.vibrate(10);
   document.querySelectorAll('.screen').forEach(function(el){ el.classList.remove('active'); });
@@ -19,13 +17,24 @@ function switchScreen(screenName, event) {
   if(event) event.currentTarget.classList.add('active');
 }
 
-function changeLang(lang){currentLang=lang;document.documentElement.lang=lang;document.documentElement.dir=(lang==='ar')?'rtl':'ltr';document.querySelectorAll('[data-i18n]').forEach(function(el){var key=el.getAttribute('data-i18n');if(t[lang]&&t[lang][key])el.textContent=t[lang][key];});amt.placeholder=(lang==='ar')?"٠":"0";renderTabs();renderOut();renderRates();}
+function changeLang(lang){
+  currentLang=lang;
+  document.documentElement.lang=lang;
+  document.documentElement.dir=(lang==='ar')?'rtl':'ltr';
+  document.querySelectorAll('[data-i18n]').forEach(function(el){
+    var key=el.getAttribute('data-i18n');
+    if(translations[lang] && translations[lang][key]) el.textContent=translations[lang][key];
+  });
+  amt.placeholder=(lang==='ar')?"٠":"0";
+  renderTabs();renderOut();renderRates();
+}
+
 function switchTab(type){currentView=type;activeList=(type==='fiat')?FIAT:CRYPTO;from=activeList[0].c;document.getElementById('btnFiat').className='filter-btn'+(type==='fiat'?' on':'');document.getElementById('btnCrypto').className='filter-btn'+(type==='crypto'?' on':'');renderTabs();renderOut();renderRates();}
 function num(str){if(!str)return 0;var v=parseFloat(String(str).replace(/\s/g,"").replace(",","."));return isFinite(v)?v:0;}
-function fmt(v,d){return v.toLocaleString('ru-RU',{minimumFractionDigits:d,maximumFractionDigits:d});}
+function fmt(v,d){return v.toLocaleString(currentLang==='ar'?'ar-EG':(currentLang==='hi'?'hi-IN':'ru-RU'),{minimumFractionDigits:d,maximumFractionDigits:d});}
 function conv(a,f,t){return a*rates[f]/rates[t];}
 function showToast(msg){toast.textContent=msg;toast.classList.add("show");setTimeout(function(){toast.classList.remove("show");},2500);}
-function copyText(text){if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(text).then(function(){showToast(t[currentLang].toast_copied+" "+text);}).catch(function(){showToast("Error");});}else{var x=document.createElement("textarea");x.value=text;document.body.appendChild(x);x.select();try{document.execCommand("copy");showToast(t[currentLang].toast_copied+" "+text);}catch(e){showToast("Error");}document.body.removeChild(x);}}
+function copyText(text){if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(text).then(function(){showToast(translations[currentLang].toast_copied+" "+text);}).catch(function(){showToast("Error");});}else{var x=document.createElement("textarea");x.value=text;document.body.appendChild(x);x.select();try{document.execCommand("copy");showToast(translations[currentLang].toast_copied+" "+text);}catch(e){showToast("Error");}document.body.removeChild(x);}}
 
 function toggleFavorite(currencyCode) {
   var idx = favorites.indexOf(currencyCode);
@@ -99,24 +108,24 @@ function renderOut(){
 }
 
 function save(){try{localStorage.setItem("fx_rates",JSON.stringify(rates));}catch(e){}}
-function renderRates(){rbox.innerHTML="";var listToShow=activeList.filter(function(x){return x.c!=="RUB";});listToShow.slice(0,6).forEach(function(x){var w=document.createElement("div");var l=document.createElement("label");l.textContent="1 "+x.c+" ("+(t[currentLang].rates_to_rub)+")";var i=document.createElement("input");i.type="text";i.inputMode="decimal";i.value=String(rates[x.c].toFixed(4)).replace(".",",");i.oninput=function(){var v=num(i.value);if(v>0){rates[x.c]=v;save();renderOut();}};w.appendChild(l);w.appendChild(i);rbox.appendChild(w);});}
+function renderRates(){rbox.innerHTML="";var listToShow=activeList.filter(function(x){return x.c!=="RUB";});listToShow.slice(0,6).forEach(function(x){var w=document.createElement("div");var l=document.createElement("label");l.textContent="1 "+x.c+" ("+(translations[currentLang].rates_to_rub)+")";var i=document.createElement("input");i.type="text";i.inputMode="decimal";i.value=String(rates[x.c].toFixed(4)).replace(".",",");i.oninput=function(){var v=num(i.value);if(v>0){rates[x.c]=v;save();renderOut();}};w.appendChild(l);w.appendChild(i);rbox.appendChild(w);});}
 amt.oninput=renderOut;
 if(searchInput) { searchInput.oninput = function() { searchQuery = this.value; renderOut(); }; }
 
 function fetchWithTimeout(url,timeout){timeout=timeout||2500;return Promise.race([fetch(url,{cache:"no-store"}),new Promise(function(_,reject){setTimeout(function(){reject(new Error("timeout"));},timeout);})]);}
-function fetchRates(){return fetchWithTimeout("https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json").then(function(r){return r.json();}).then(function(j){var R=j.usd;if(!R||!R.rub)throw new Error("data");rates.USD=R.rub;FIAT.forEach(function(item){if(item.c!=="USD"&&item.c!=="RUB"&&R[item.c.toLowerCase()])rates[item.c]=R.rub/R[item.c.toLowerCase()];});CRYPTO.forEach(function(item){if(item.c==="USDT")rates[item.c]=R.rub;else if(R[item.c.toLowerCase()])rates[item.c]=R.rub/R[item.c.toLowerCase()];});return t[currentLang].status_updated;});}
+function fetchRates(){return fetchWithTimeout("https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json").then(function(r){return r.json();}).then(function(j){var R=j.usd;if(!R||!R.rub)throw new Error("data");rates.USD=R.rub;FIAT.forEach(function(item){if(item.c!=="USD"&&item.c!=="RUB"&&R[item.c.toLowerCase()])rates[item.c]=R.rub/R[item.c.toLowerCase()];});CRYPTO.forEach(function(item){if(item.c==="USDT")rates[item.c]=R.rub;else if(R[item.c.toLowerCase()])rates[item.c]=R.rub/R[item.c.toLowerCase()];});return translations[currentLang].status_updated;});}
 
 function load(){
   btn.blur(); 
   btn.disabled=true;
   btnIcon.innerHTML='<span class="spinner"></span>';
-  btnText.textContent=t[currentLang].btn_loading;
-  st.textContent=t[currentLang].status_loading;
+  btnText.textContent=translations[currentLang].btn_loading;
+  st.textContent=translations[currentLang].status_loading;
   fetchRates().then(function(label){
     save(); renderRates(); renderOut();
     st.textContent=label+" ("+new Date().toLocaleTimeString().slice(0,5)+")";
-  }).catch(function(){ st.textContent=t[currentLang].status_error; })
-    .finally(function(){ btn.disabled=false; btnIcon.innerHTML=''; btnText.textContent=t[currentLang].btn_update; });
+  }).catch(function(){ st.textContent=translations[currentLang].status_error; })
+    .finally(function(){ btn.disabled=false; btnIcon.innerHTML=''; btnText.textContent=translations[currentLang].btn_update; });
 }
 
 btn.onclick=load;
