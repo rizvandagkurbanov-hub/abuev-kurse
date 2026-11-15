@@ -165,7 +165,6 @@ function showToast(msg){toast.textContent=msg;toast.classList.add("show");setTim
 function copyText(text){haptic();if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(text).then(function(){showToast(t[currentLang].toast_copied+" "+text);}).catch(function(){showToast("Error");});}else{var x=document.createElement("textarea");x.value=text;document.body.appendChild(x);x.select();try{document.execCommand("copy");showToast(t[currentLang].toast_copied+" "+text);}catch(e){showToast("Error");}document.body.removeChild(x);}}
 function renderTabs(){tabs.innerHTML="";activeList.forEach(function(x){var b=document.createElement("button");b.className="tab"+(x.c===from?" on":"");b.textContent=x.c;b.onclick=function(){from=x.c;renderTabs();renderOut();};tabs.appendChild(b);});}
 
-// Анимация изменения цифр
 function animateValue(obj, start, end, duration, suffix) {
   let startTimestamp = null;
   const step = (timestamp) => {
@@ -173,11 +172,7 @@ function animateValue(obj, start, end, duration, suffix) {
     const progress = Math.min((timestamp - startTimestamp) / duration, 1);
     const current = Math.floor(progress * (end - start) + start);
     obj.innerHTML = fmt(current, 2) + (suffix ? ' ' + suffix : '');
-    if (progress < 1) {
-      window.requestAnimationFrame(step);
-    } else {
-      obj.innerHTML = fmt(end, 2) + (suffix ? ' ' + suffix : '');
-    }
+    if (progress < 1) { window.requestAnimationFrame(step); } else { obj.innerHTML = fmt(end, 2) + (suffix ? ' ' + suffix : ''); }
   };
   window.requestAnimationFrame(step);
 }
@@ -195,4 +190,5 @@ function renderOut(){
     let touchStartX = 0, touchStartY = 0, touchStartTime = 0;
     d.addEventListener('touchstart', function(e) { touchStartX = e.changedTouches[0].screenX; touchStartY = e.changedTouches[0].screenY; touchStartTime = Date.now(); }, {passive: true});
     d.addEventListener('touchend', function(e) {
-      let touchEndX = e.changedTouches[0].screenX, touchEndY = e.changedTouches[
+      let touchEndX = e.changedTouches[0].screenX, touchEndY = e.changedTouches[0].screenY;
+      let diffX = touchStartX - touchEndX, diff
