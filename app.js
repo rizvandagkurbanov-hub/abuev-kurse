@@ -1,4 +1,7 @@
-var currentLang = localStorage.getItem("app_lang") || 'ru';
+var savedLang = localStorage.getItem("app_lang");
+var sysLang = navigator.language ? navigator.language.split('-')[0] : 'ru';
+var currentLang = savedLang || (translations[sysLang] ? sysLang : 'ru');
+
 var currentView='fiat',activeList=FIAT,from="USD";
 var searchQuery = "";
 var favorites = JSON.parse(localStorage.getItem("fx_favorites") || "[]");
@@ -30,7 +33,7 @@ function changeLang(lang){
   renderTabs();renderOut();renderRates();
 }
 
-function switchTab(type){currentView=type;activeList=(type==='fiat')?FIAT:CRYPTO;from=activeList[0].c;document.getElementById('btnFiat').className='filter-btn'+(type==='fiat'?' on':'');document.getElementById('btnCrypto').className='filter-btn'+(type==='crypto'?' on':'');renderTabs();renderOut();renderRates();}
+function switchTab(type){currentView=type;activeList=(type==='fiat')?FIAT:CRYPTO;from=activeList[0].c;document.getElementById('btnFiat').className='filter-btn'+(type==='fiat'?' on':'');document.getElementById('btnCrypto').className='filter-btn'+(type==='crypto'?' on':'');if(typeof isTabsExpanded !== 'undefined') isTabsExpanded = false;renderTabs();renderOut();renderRates();}
 function num(str){if(!str)return 0;var v=parseFloat(String(str).replace(/\s/g,"").replace(",","."));return isFinite(v)?v:0;}
 function fmt(v,d){return v.toLocaleString(currentLang==='ar'?'ar-EG':(currentLang==='hi'?'hi-IN':'ru-RU'),{minimumFractionDigits:d,maximumFractionDigits:d});}
 function conv(a,f,t){return a*rates[f]/rates[t];}
@@ -44,7 +47,17 @@ function toggleFavorite(currencyCode) {
   renderOut();
 }
 
-function renderTabs(){tabs.innerHTML="";activeList.forEach(function(x){var b=document.createElement("button");b.className="tab"+(x.c===from?" on":"");b.textContent=x.c;b.onclick=function(){from=x.c;renderTabs();renderOut();};tabs.appendChild(b);});}
+function renderTabs(){
+  tabs.innerHTML="";
+  activeList.forEach(function(x){
+    var b=document.createElement("button");
+    b.className="tab"+(x.c===from?" on":"");
+    b.textContent=x.c;
+    b.onclick=function(){from=x.c;renderTabs();renderOut();};
+    tabs.appendChild(b);
+  });
+  if(typeof updateTabsView === 'function') updateTabsView();
+}
 
 function renderOut(){
   var a=num(amt.value);
@@ -56,10 +69,10 @@ function renderOut(){
     var q = searchQuery.toLowerCase();
     return x.c.toLowerCase().includes(q) || (x.n[currentLang] && x.n[currentLang].toLowerCase().includes(q)) || (x.n['en'] && x.n['en'].toLowerCase().includes(q));
   });
-  filtered.sort(function(x, y) {
-    var isFavX = favorites.includes(x.c), isFavY = favorites.includes(y.c);
-    if (isFavX && !isFavY) return -1; if (!isFavX && isFavY) return 1; return 0;
-  });
+  
+  if(typeof sortByFavorites === 'function') {
+    filtered = sortByFavorites(filtered);
+  }
 
   filtered.forEach(function(x){
     var v=conv(calcValue,from,x.c);
