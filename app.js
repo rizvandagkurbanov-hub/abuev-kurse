@@ -27,11 +27,10 @@ function changeLang(lang){
     if(translations[lang] && translations[lang][key]) el.textContent=translations[lang][key];
   });
   amt.placeholder=(lang==='ar')?"٠":"0";
-  if(typeof updatePickerBtn === 'function') updatePickerBtn();
   renderTabs();renderOut();renderRates();
 }
 
-function switchTab(type){currentView=type;activeList=(type==='fiat')?FIAT:CRYPTO;from=activeList[0].c;if(typeof updatePickerBtn === 'function') updatePickerBtn();document.getElementById('btnFiat').className='filter-btn'+(type==='fiat'?' on':'');document.getElementById('btnCrypto').className='filter-btn'+(type==='crypto'?' on':'');renderTabs();renderOut();renderRates();}
+function switchTab(type){currentView=type;activeList=(type==='fiat')?FIAT:CRYPTO;from=activeList[0].c;document.getElementById('btnFiat').className='filter-btn'+(type==='fiat'?' on':'');document.getElementById('btnCrypto').className='filter-btn'+(type==='crypto'?' on':'');renderTabs();renderOut();renderRates();}
 function num(str){if(!str)return 0;var v=parseFloat(String(str).replace(/\s/g,"").replace(",","."));return isFinite(v)?v:0;}
 function fmt(v,d){return v.toLocaleString(currentLang==='ar'?'ar-EG':(currentLang==='hi'?'hi-IN':'ru-RU'),{minimumFractionDigits:d,maximumFractionDigits:d});}
 function conv(a,f,t){return a*rates[f]/rates[t];}
@@ -45,11 +44,10 @@ function toggleFavorite(currencyCode) {
   renderOut();
 }
 
-function renderTabs(){tabs.innerHTML="";activeList.forEach(function(x){var b=document.createElement("button");b.className="tab"+(x.c===from?" on":"");b.textContent=x.c;b.onclick=function(){from=x.c;if(typeof updatePickerBtn === 'function') updatePickerBtn();renderTabs();renderOut();};tabs.appendChild(b);});}
+function renderTabs(){tabs.innerHTML="";activeList.forEach(function(x){var b=document.createElement("button");b.className="tab"+(x.c===from?" on":"");b.textContent=x.c;b.onclick=function(){from=x.c;renderTabs();renderOut();};tabs.appendChild(b);});}
 
 function renderOut(){
   var a=num(amt.value);
-  // Если поле пустое или 0, показываем курсы 1 к 1
   var calcValue = (a === 0) ? 1 : a;
   
   listContainer.innerHTML="";
@@ -64,7 +62,7 @@ function renderOut(){
   });
 
   filtered.forEach(function(x){
-    var v=conv(calcValue,from,x.c); // Считаем от calcValue
+    var v=conv(calcValue,from,x.c);
     var vRub=(x.c==="RUB")?v:conv(v,x.c,"RUB");
     var one=conv(1,from,x.c);
     var d=document.createElement("div");
@@ -91,15 +89,12 @@ function renderOut(){
     shareBtn.className = "btn-share";
     shareBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg> Поделиться';
     shareBtn.onclick = function(e) { e.stopPropagation(); if(typeof shareResult === 'function') shareResult(fmt(calcValue,2), from, x.c, fmt(v,2)); };
-    
-    // Подсказка теперь показывает актуальную базовую валюту
     if (x.c === "RUB") {
       rightPart.innerHTML = '<div class="val-main" data-curr=""></div>' + (x.c===from?'':'<div class="one">1 '+from+" = "+fmt(one,one<0.1?6:4)+" RUB</div>");
     } else {
       var rubLine = (currentView === 'crypto') ? '<div class="val-sec" data-rub="true">≈ ' + fmt(vRub, 0) + ' RUB</div>' : '';
       rightPart.innerHTML = '<div class="val-main" data-curr="'+x.c+'"></div>' + rubLine + (x.c===from?'':'<div class="one">1 '+from+" = "+fmt(one,one<0.1?6:4)+" "+x.c+'</div>');
     }
-    
     if (x.c !== from) { rightPart.appendChild(shareBtn); }
     d.appendChild(leftPart); d.appendChild(rightPart);
     listContainer.appendChild(d);
