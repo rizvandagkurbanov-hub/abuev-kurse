@@ -37,7 +37,13 @@
     <div class="card">
       <label for="amt" data-i18n="amount">Сумма</label>
       <input id="amt" type="text" inputmode="decimal" value="" placeholder="0" autocomplete="off">
-      <div class="tabs" id="tabs"></div>
+      
+      <div class="tabs-wrapper" id="tabsWrapper">
+        <div class="tabs-inner">
+          <div class="tabs" id="tabs"></div>
+        </div>
+      </div>
+      <button class="btn-expand" id="expandBtn" onclick="toggleTabs()">Показать все валюты ▾</button>
     </div>
 
     <div class="card" id="out">
@@ -45,12 +51,10 @@
         <button class="filter-btn on" id="btnFiat" onclick="switchTab('fiat')" data-i18n="tab_fiat">💵 Валюты</button>
         <button class="filter-btn" id="btnCrypto" onclick="switchTab('crypto')" data-i18n="tab_crypto">🪙 Крипта</button>
       </div>
-      
       <div class="search-box">
         <svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
         <input id="searchInput" type="text" placeholder="Поиск валюты..." autocomplete="off">
       </div>
-      
       <div id="listContainer"></div>
     </div>
   </div>
@@ -102,6 +106,7 @@
 <script src="./lang.js"></script>
 <script src="./data.js"></script>
 <script src="./update.js"></script>
+<script src="./animations.js"></script>
 <script src="./app.js"></script>
 </body>
 </html>
