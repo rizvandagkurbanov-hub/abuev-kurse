@@ -11,12 +11,15 @@ function updateTabsView() {
   var btn = document.getElementById("expandBtn");
   if (!wrapper || !btn) return;
 
+  // Показываем выбранную валюту на кнопке
+  var labelText = "Базовая: " + from;
+  
   if (isTabsExpanded) {
     wrapper.classList.add("expanded");
-    btn.textContent = "Свернуть ▴";
+    btn.innerHTML = '<span>' + labelText + '</span> ▴';
   } else {
     wrapper.classList.remove("expanded");
-    btn.textContent = "Показать все валюты ▾";
+    btn.innerHTML = '<span>' + labelText + '</span> ▾';
   }
 }
 
