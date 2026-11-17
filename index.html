@@ -1,115 +1,220 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" data-theme="auto">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Abuev</title>
-<meta name="apple-mobile-web-app-title" content="Abuev">
+
+<title>Abuev — конвертер валют и криптовалют</title>
+<meta name="description" content="Abuev — быстрый конвертер валют и криптовалют: актуальные курсы к рублю, история изменения, избранное и 10 языков интерфейса. Работает офлайн.">
+<meta name="theme-color" content="#f4f6fb">
+<meta name="color-scheme" content="light dark">
+
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="./icons/favicon-16.png">
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="icon" type="image/png" href="./logo.png">
-<link rel="apple-touch-icon" href="./logo.png">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<meta name="apple-mobile-web-app-title" content="Abuev">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="mobile-web-app-capable" content="yes">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Abuev">
+<meta property="og:title" content="Abuev — конвертер валют и криптовалют">
+<meta property="og:description" content="Актуальные курсы к рублю, история изменения, избранное, 10 языков. Работает офлайн.">
+<meta property="og:image" content="https://rizvandagkurbanov-hub.github.io/abuev-kurse/icons/icon-512.png">
+<meta property="og:url" content="https://rizvandagkurbanov-hub.github.io/abuev-kurse/">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Abuev — конвертер валют и криптовалют">
+<meta name="twitter:description" content="Актуальные курсы к рублю, история изменения, избранное, 10 языков.">
+<meta name="twitter:image" content="https://rizvandagkurbanov-hub.github.io/abuev-kurse/icons/icon-512.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./style.css">
 </head>
 <body>
 
-<div id="splash">
-  <img src="./logo.png" alt="Logo" class="splash-logo">
+<div id="splash" aria-hidden="true">
+  <img src="./logo.png" alt="" class="splash-logo" width="96" height="96">
   <div class="splash-spinner"></div>
 </div>
 
-<main>
-  <div id="screen-converter" class="screen active">
-    <div class="header">
-      <div class="logo-block">
-        <img src="./logo.png" alt="Abuev Logo" class="logo-img">
-        <div>
-          <h1 data-i18n="app_title">Abuev</h1>
-          <p class="sub" data-i18n="app_subtitle">Конвертер валют и криптовалют</p>
-        </div>
-      </div>
-      <select class="lang-select" id="langSelect" onchange="changeLang(this.value)">
-        <option value="ru">RU 🇷🇺</option><option value="en">EN 🇬🇧</option><option value="es">ES 🇪🇸</option><option value="de">DE 🇩🇪</option><option value="fr">FR 🇫🇷</option><option value="zh">ZH 🇨🇳</option><option value="ja">JA 🇯🇵</option><option value="pt">PT 🇵🇹</option><option value="hi">HI 🇮🇳</option><option value="ar">AR 🇸🇦</option>
-      </select>
+<div id="offlineBar" class="offline-bar" hidden data-i18n="offline">Нет интернета — работаю офлайн</div>
+
+<header class="topbar">
+  <div class="brand">
+    <img src="./logo.png" alt="Abuev" class="brand-logo" width="46" height="46">
+    <div class="brand-text">
+      <h1 data-i18n="app_title">Abuev</h1>
+      <p class="brand-sub" data-i18n="app_subtitle">Конвертер валют и криптовалют</p>
     </div>
-    
-    <div class="card">
-      <label for="amt" data-i18n="amount">Сумма</label>
-      <input id="amt" type="text" inputmode="decimal" value="" placeholder="0" autocomplete="off">
-      
-      <div class="tabs-wrapper" id="tabsWrapper">
-        <div class="tabs-inner">
-          <div class="tabs" id="tabs"></div>
-        </div>
+  </div>
+
+  <div class="topbar-actions">
+    <button class="icon-btn" id="installBtn" hidden data-i18n-title="install" title="Установить приложение" aria-label="Установить приложение">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M5 21h14"></path></svg>
+    </button>
+    <button class="icon-btn" id="themeBtn" data-i18n-title="theme" title="Тема" aria-label="Тема">
+      <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+      <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path></svg>
+    </button>
+    <div class="lang-wrap">
+      <select id="langSelect" class="lang-select" aria-label="Language">
+        <option value="ru">RU</option><option value="en">EN</option><option value="es">ES</option>
+        <option value="de">DE</option><option value="fr">FR</option><option value="zh">ZH</option>
+        <option value="ja">JA</option><option value="pt">PT</option><option value="hi">HI</option>
+        <option value="ar">AR</option>
+      </select>
+      <svg class="lang-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- ЭКРАН 1: КОНВЕРТЕР -->
+  <section id="screen-converter" class="screen active" aria-label="Конвертер">
+    <div class="card amount-card">
+      <div class="amount-head">
+        <label for="amt" data-i18n="amount">Сумма</label>
+        <span class="base-badge"><span data-i18n="base_label">Базовая валюта</span>: <b id="baseCode">USD</b></span>
       </div>
-      
-      <button class="btn-expand" id="expandBtn" onclick="toggleTabs()">
-        <span id="currentCurrencyLabel">Базовая: USD</span> ▾
+      <div class="amount-row">
+        <input id="amt" class="amount-input" type="text" inputmode="decimal" autocomplete="off"
+               placeholder="0" value="1" aria-label="Сумма">
+        <button class="swap-btn" id="swapBtn" type="button" title="← / →" aria-label="Поменять валюту">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10 4 7l3-3"></path><path d="M4 7h13"></path><path d="m17 14 3 3-3 3"></path><path d="M20 17H7"></path></svg>
+        </button>
+      </div>
+
+      <div class="tabs-wrapper" id="tabsWrapper">
+        <div class="tabs-inner"><div class="tabs" id="tabs"></div></div>
+      </div>
+
+      <button class="expand-btn" id="expandBtn" type="button" aria-expanded="false" aria-controls="tabsWrapper">
+        <span data-i18n="expand">Все валюты</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
       </button>
     </div>
 
-    <div class="card" id="out">
-      <div class="filters">
-        <button class="filter-btn on" id="btnFiat" onclick="switchTab('fiat')" data-i18n="tab_fiat">💵 Валюты</button>
-        <button class="filter-btn" id="btnCrypto" onclick="switchTab('crypto')" data-i18n="tab_crypto">🪙 Крипта</button>
+    <div class="card results-card">
+      <div class="seg" id="viewSeg" role="tablist" aria-label="Тип валют">
+        <span class="seg-thumb" id="segThumb"></span>
+        <button class="seg-btn on" type="button" role="tab" aria-selected="true" data-view="fiat" data-i18n="tab_fiat">💵 Валюты</button>
+        <button class="seg-btn" type="button" role="tab" aria-selected="false" data-view="crypto" data-i18n="tab_crypto">🪙 Крипта</button>
       </div>
-      <div class="search-box">
-        <svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-        <input id="searchInput" type="text" placeholder="Поиск валюты..." autocomplete="off">
-      </div>
-      <div id="listContainer"></div>
-    </div>
-  </div>
 
-  <div id="screen-rates" class="screen">
-    <div class="header">
-      <div class="logo-block">
-        <div>
-          <h1 data-i18n="rates_title">Курсы</h1>
-          <p class="sub" data-i18n="rates_subtitle">Актуальные курсы к рублю</p>
-        </div>
+      <div class="search">
+        <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+        <input id="searchInput" class="search-input" type="search" autocomplete="off"
+               data-i18n-ph="search_ph" placeholder="Поиск: USD, евро, биткоин…" aria-label="Поиск валюты">
+        <button class="clear-btn" id="clearSearch" type="button" hidden aria-label="Очистить поиск">×</button>
       </div>
+
+      <div id="list" class="list" role="list"></div>
+      <p class="empty" id="empty" hidden data-i18n="no_results">Ничего не найдено</p>
+      <p class="hint" data-i18n="rates_hint">Нажмите на значение, чтобы скопировать. Звёздочка — в избранное.</p>
     </div>
-    <div class="card">
-      <div class="rates" id="rates"></div>
-      <div class="row"><button class="btn" id="reset"><span id="btn-icon"></span><span id="btn-text" data-i18n="btn_update">Обновить курс</span></button></div>
-      <p class="note" id="st" data-i18n="status_loading">Загружаю курс…</p>
+  </section>
+
+  <!-- ЭКРАН 2: КУРСЫ -->
+  <section id="screen-rates" class="screen" aria-label="Курсы">
+    <div class="screen-head">
+      <h2 data-i18n="rates_title">Курсы</h2>
+      <p class="muted" data-i18n="rates_subtitle">Курсы к рублю — можно править вручную</p>
     </div>
-  </div>
+
+    <div class="card rates-card">
+      <div class="search">
+        <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+        <input id="ratesSearch" class="search-input" type="search" autocomplete="off"
+               data-i18n-ph="rates_search_ph" placeholder="Поиск валюты…" aria-label="Поиск валюты">
+      </div>
+
+      <div id="ratesList" class="rates-list"></div>
+
+      <div class="rates-actions">
+        <button class="btn" id="resetRates" type="button">
+          <span data-i18n="reset_rates">Сбросить</span>
+        </button>
+        <button class="btn primary" id="updateBtn" type="button">
+          <span class="spinner" id="btnSpinner" hidden></span>
+          <span id="btnText" data-i18n="btn_update">Обновить курсы</span>
+        </button>
+      </div>
+
+      <p class="note" id="status" data-i18n="status_loading">Получаю актуальные курсы…</p>
+      <p class="note small" data-i18n="source_note">Источник: Exchange Rate API · обновляется раз в день</p>
+    </div>
+  </section>
 </main>
 
-<div class="bottom-nav">
-  <button class="nav-item active" onclick="switchScreen('converter', event)">
-    <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
+<nav class="bottom-nav" aria-label="Разделы">
+  <span class="nav-pill" id="navPill"></span>
+  <button class="nav-item active" type="button" data-screen="converter">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"></path><path d="M5 9.5V21h14V9.5"></path></svg>
     <span data-i18n="nav_conv">Конвертер</span>
   </button>
-  <button class="nav-item" onclick="switchScreen('rates', event)">
-    <svg viewBox="0 0 24 24"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>
+  <button class="nav-item" type="button" data-screen="rates">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10"></path><path d="M10 20V4"></path><path d="M16 20v-7"></path><path d="M22 20H2"></path></svg>
     <span data-i18n="nav_rates">Курсы</span>
   </button>
-</div>
+</nav>
 
-<div id="toast" data-i18n="toast_copied">Скопировано!</div>
+<!-- ГРАФИК -->
+<div class="modal" id="chartModal" aria-hidden="true">
+  <div class="modal-backdrop" data-close="1"></div>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="chartTitle">
+    <div class="sheet-grip" aria-hidden="true"></div>
+    <div class="sheet-head">
+      <div>
+        <h2 id="chartTitle">USD / RUB</h2>
+        <p class="muted" id="chartSubtitle"></p>
+      </div>
+      <button class="icon-btn" id="closeChart" type="button" data-i18n-title="close" title="Закрыть" aria-label="Закрыть">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+      </button>
+    </div>
 
-<div class="modal" id="chartModal">
-  <div class="modal-content">
-    <div class="modal-header"><div class="modal-title" id="chartTitle">График</div><button class="close-btn" id="closeChart">&times;</button></div>
-    <div class="chart-container" id="chartContainer"><canvas id="chartCanvas" style="width:100%; height:100%;"></canvas></div>
+    <div class="seg small" id="periodSeg">
+      <span class="seg-thumb" id="periodThumb"></span>
+      <button class="seg-btn on" type="button" data-days="7" data-i18n="chart_7d">7 дней</button>
+      <button class="seg-btn" type="button" data-days="30" data-i18n="chart_30d">30 дней</button>
+    </div>
+
+    <div class="chart-stats" id="chartStats"></div>
+
+    <div class="chart-box" id="chartBox">
+      <canvas id="chartCanvas"></canvas>
+      <div class="chart-tip" id="chartTip" hidden></div>
+      <div class="chart-state" id="chartState"></div>
+    </div>
+
+    <p class="chart-note" data-i18n="chart_note">Исторические данные: Exchange Rate API</p>
   </div>
 </div>
 
-<script>
-  setTimeout(function() {
-    var el = document.getElementById('splash');
-    if (el) el.classList.add('hide');
-  }, 800);
-</script>
+<div id="toast" role="status" aria-live="polite"></div>
 
 <script src="./lang.js"></script>
 <script src="./data.js"></script>
 <script src="./update.js"></script>
-<script src="./app.js"></script> <!-- app.js загружается первым -->
-<script src="./animations.js"></script> <!-- animations.js загружается после, чтобы видеть переменную from -->
+<script src="./animations.js"></script>
+<script src="./app.js"></script>
+<script>
+  // Сплэш убираем сразу после загрузки — не ждём сеть
+  window.addEventListener("load", function () {
+    var splash = document.getElementById("splash");
+    if (splash) {
+      splash.classList.add("hide");
+      setTimeout(function () { splash.remove(); }, 500);
+    }
+  });
+  setTimeout(function () {
+    var splash = document.getElementById("splash");
+    if (splash) splash.classList.add("hide");
+  }, 1200);
+</script>
 </body>
 </html>

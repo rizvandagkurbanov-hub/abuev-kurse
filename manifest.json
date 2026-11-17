@@ -1,0 +1,42 @@
+{
+  "name": "Abuev — конвертер валют и криптовалют",
+  "short_name": "Abuev",
+  "description": "Быстрый конвертер валют и криптовалют: актуальные курсы к рублю, история изменения, избранное и 10 языков. Работает офлайн.",
+  "lang": "ru",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait",
+  "background_color": "#0b1020",
+  "theme_color": "#3b5bdb",
+  "categories": ["finance", "utilities"],
+  "icons": [
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Курсы",
+      "url": "./?screen=rates",
+      "icons": [{ "src": "./icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

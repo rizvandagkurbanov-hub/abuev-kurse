@@ -1,153 +1,1158 @@
-var savedLang = localStorage.getItem("app_lang");
-var sysLang = navigator.language ? navigator.language.split('-')[0] : 'ru';
-var currentLang = savedLang || (translations[sysLang] ? sysLang : 'ru');
+/* Abuev — основная логика: состояние, рендер, курсы, график. */
 
-var currentView='fiat',activeList=FIAT,from="USD";
-var searchQuery = "";
-var favorites = JSON.parse(localStorage.getItem("fx_favorites") || "[]");
+var state = {
+  lang: "ru",
+  theme: "auto",
+  base: "USD",
+  prevBase: "USD",
+  view: "fiat",
+  rates: {},
+  apiRates: {},
+  updatedAt: 0,
+  favorites: [],
+  query: "",
+  ratesQuery: "",
+  tabsOpen: false,
+  screen: "converter",
+  loading: false,
+  chart: null,
+  installPrompt: null
+};
 
-var DEF={USD:80.67,EUR:89.81,AED:21.96,RUB:1,CNY:12.08,JPY:0.51,TRY:1.62,KZT:0.16,GBP:102.5,CHF:91.2,INR:0.97,KRW:0.06,CAD:58.9,AUD:52.8,HKD:10.3,SGD:60.1,BRL:16.2,MXN:4.7,ZAR:4.3,BYN:25.1,UZS:0.0065,AMD:0.20,KGS:0.91,TJS:7.3,AZN:47.4,GEL:29.5,BTC:4500000,ETH:240000,USDT:80.6,BNB:40000,SOL:13000,XRP:50,TON:600,DOGE:12,ADA:35,TRX:7,AVAX:3000,SHIB:0.002,DOT:600,LTC:6500,BCH:20000,LINK:1200,MATIC:80,XLM:9,ATOM:800,UNI:700};
-var rates=Object.assign({},DEF);try{var s=localStorage.getItem("fx_rates");if(s){var p=JSON.parse(s);for(var k in DEF){if(p[k]>0)rates[k]=p[k];}}}catch(e){}rates.RUB=1;
-var amt=document.getElementById("amt"),tabs=document.getElementById("tabs"),rbox=document.getElementById("rates"),st=document.getElementById("st"),toast=document.getElementById("toast"),btn=document.getElementById("reset"),btnIcon=document.getElementById("btn-icon"),btnText=document.getElementById("btn-text"),listContainer=document.getElementById("listContainer"),modal=document.getElementById("chartModal"),closeChart=document.getElementById("closeChart"),chartCanvas=document.getElementById("chartCanvas"),chartTitle=document.getElementById("chartTitle");
-var searchInput = document.getElementById("searchInput");
+var RATES_URLS = [
+  "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.min.json",
+  "https://latest.currency-api.pages.dev/v1/currencies/usd.min.json"
+];
+var HISTORY_CACHE_MS = 6 * 60 * 60 * 1000;
 
-function switchScreen(screenName, event) {
-  if(navigator.vibrate) navigator.vibrate(10);
-  document.querySelectorAll('.screen').forEach(function(el){ el.classList.remove('active'); });
-  if (screenName === 'converter') { document.getElementById('screen-converter').classList.add('active'); } 
-  else { document.getElementById('screen-rates').classList.add('active'); }
-  document.querySelectorAll('.nav-item').forEach(function(btn){ btn.classList.remove('active'); });
-  if(event) event.currentTarget.classList.add('active');
+/* ================= инициализация ================= */
+
+function init() {
+  restoreState();
+  applyTheme(state.theme);
+  applyLang(state.lang, true);
+  bindEvents();
+  renderTabs();
+  renderList();
+  renderRates();
+  updateStatus(state.updatedAt
+    ? t("updated_at") + " · " + formatTime(state.updatedAt, state.lang)
+    : t("status_loading"));
+  registerServiceWorker();
+  watchConnection();
+  syncRates({ silent: true });
 }
 
-function changeLang(lang){
-  currentLang=lang;
-  localStorage.setItem("app_lang", lang);
-  document.documentElement.lang=lang;
-  document.documentElement.dir=(lang==='ar')?'rtl':'ltr';
-  document.querySelectorAll('[data-i18n]').forEach(function(el){
-    var key=el.getAttribute('data-i18n');
-    if(translations[lang] && translations[lang][key]) el.textContent=translations[lang][key];
-  });
-  amt.placeholder=(lang==='ar')?"٠":"0";
-  renderTabs();renderOut();renderRates();
-}
-
-function switchTab(type){currentView=type;activeList=(type==='fiat')?FIAT:CRYPTO;from=activeList[0].c;document.getElementById('btnFiat').className='filter-btn'+(type==='fiat'?' on':'');document.getElementById('btnCrypto').className='filter-btn'+(type==='crypto'?' on':'');if(typeof isTabsExpanded !== 'undefined') isTabsExpanded = false;renderTabs();renderOut();renderRates();}
-function num(str){if(!str)return 0;var v=parseFloat(String(str).replace(/\s/g,"").replace(",","."));return isFinite(v)?v:0;}
-function fmt(v,d){return v.toLocaleString(currentLang==='ar'?'ar-EG':(currentLang==='hi'?'hi-IN':'ru-RU'),{minimumFractionDigits:d,maximumFractionDigits:d});}
-function conv(a,f,t){return a*rates[f]/rates[t];}
-function showToast(msg){toast.textContent=msg;toast.classList.add("show");setTimeout(function(){toast.classList.remove("show");},2500);}
-function copyText(text){if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(text).then(function(){showToast(translations[currentLang].toast_copied+" "+text);}).catch(function(){showToast("Error");});}else{var x=document.createElement("textarea");x.value=text;document.body.appendChild(x);x.select();try{document.execCommand("copy");showToast(translations[currentLang].toast_copied+" "+text);}catch(e){showToast("Error");}document.body.removeChild(x);}}
-
-function toggleFavorite(currencyCode) {
-  var idx = favorites.indexOf(currencyCode);
-  if (idx > -1) { favorites.splice(idx, 1); } else { favorites.push(currencyCode); }
-  localStorage.setItem("fx_favorites", JSON.stringify(favorites));
-  renderOut();
-}
-
-function renderTabs(){
-  tabs.innerHTML="";
-  activeList.forEach(function(x){
-    var b=document.createElement("button");
-    b.className="tab"+(x.c===from?" on":"");
-    b.textContent=x.c;
-    b.onclick=function(){from=x.c;renderTabs();renderOut();};
-    tabs.appendChild(b);
-  });
-  if(typeof updateTabsView === 'function') updateTabsView();
-}
-
-function renderOut(){
-  var a=num(amt.value);
-  var calcValue = (a === 0) ? 1 : a;
-  
-  listContainer.innerHTML="";
-  var filtered = activeList.filter(function(x){
-    if (!searchQuery) return true;
-    var q = searchQuery.toLowerCase();
-    return x.c.toLowerCase().includes(q) || (x.n[currentLang] && x.n[currentLang].toLowerCase().includes(q)) || (x.n['en'] && x.n['en'].toLowerCase().includes(q));
-  });
-  
-  if(typeof sortByFavorites === 'function') {
-    filtered = sortByFavorites(filtered);
+function restoreState() {
+  var savedLang = loadJSON("abuev_lang", null);
+  if (savedLang && translations[savedLang]) state.lang = savedLang;
+  else {
+    var sys = (navigator.language || "ru").split("-")[0];
+    state.lang = translations[sys] ? sys : "ru";
   }
 
-  filtered.forEach(function(x){
-    var v=conv(calcValue,from,x.c);
-    var vRub=(x.c==="RUB")?v:conv(v,x.c,"RUB");
-    var one=conv(1,from,x.c);
-    var d=document.createElement("div");
-    d.className="res"+(x.c===from?" src":"");
-    var isFav = favorites.includes(x.c);
-    var starClass = "star-btn" + (isFav ? " active" : "");
-    var starIcon = '<svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>';
-    var leftPart=document.createElement("div");
-    leftPart.className="res-left";
-    var starBtn = document.createElement("button");
-    starBtn.className = starClass;
-    starBtn.innerHTML = starIcon;
-    starBtn.onclick = function(e) { e.stopPropagation(); toggleFavorite(x.c); };
-    var textPart = document.createElement("div");
-    textPart.onclick=function(){if(x.c!==from){openChart(x.c);}};
-    var chartIcon=(x.c!==from)?'<svg class="chart-icon" viewBox="0 0 24 24"><polyline points="3 17 9 11 15 15 21 7"></polyline><polyline points="14 7 21 7 21 14"></polyline></svg>':'';
-    var currencyName=x.n[currentLang]||x.n['en'];
-    textPart.innerHTML='<div class="code">'+x.s+" "+x.c+chartIcon+'</div><div class="name">'+currencyName+'</div>';
-    leftPart.appendChild(starBtn); leftPart.appendChild(textPart);
-    var rightPart=document.createElement("div");
-    rightPart.className="res-right";
-    rightPart.onclick=function(){copyText(fmt(v,2)+" "+x.c);};
-    var shareBtn = document.createElement("button");
-    shareBtn.className = "btn-share";
-    shareBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg> Поделиться';
-    shareBtn.onclick = function(e) { e.stopPropagation(); if(typeof shareResult === 'function') shareResult(fmt(calcValue,2), from, x.c, fmt(v,2)); };
-    if (x.c === "RUB") {
-      rightPart.innerHTML = '<div class="val-main" data-curr=""></div>' + (x.c===from?'':'<div class="one">1 '+from+" = "+fmt(one,one<0.1?6:4)+" RUB</div>");
-    } else {
-      var rubLine = (currentView === 'crypto') ? '<div class="val-sec" data-rub="true">≈ ' + fmt(vRub, 0) + ' RUB</div>' : '';
-      rightPart.innerHTML = '<div class="val-main" data-curr="'+x.c+'"></div>' + rubLine + (x.c===from?'':'<div class="one">1 '+from+" = "+fmt(one,one<0.1?6:4)+" "+x.c+'</div>');
+  state.theme = loadJSON("abuev_theme", "auto");
+  var base = loadJSON("abuev_base", "USD");
+  if (FIAT.some(function (x) { return x.c === base; })) state.base = base;
+
+  state.rates = Object.assign({}, DEFAULT_RATES);
+  var storedRates = loadJSON("abuev_rates", null);
+  if (storedRates) {
+    Object.keys(storedRates).forEach(function (code) {
+      var v = storedRates[code];
+      if (typeof v === "number" && v > 0) state.rates[code] = v;
+    });
+  }
+  state.apiRates = Object.assign({}, state.rates);
+  state.updatedAt = loadJSON("abuev_rates_at", 0) || 0;
+
+  var favs = loadJSON("abuev_favorites", []);
+  if (Array.isArray(favs)) {
+    state.favorites = favs.filter(function (c) {
+      return FIAT.concat(CRYPTO).some(function (x) { return x.c === c; });
+    });
+  }
+}
+
+/* ================= тема ================= */
+
+function applyTheme(mode) {
+  state.theme = mode;
+  document.documentElement.setAttribute("data-theme", mode);
+  saveJSON("abuev_theme", mode);
+  updateThemeMeta();
+}
+
+function currentThemeIsDark() {
+  if (state.theme === "dark") return true;
+  if (state.theme === "light") return false;
+  return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+}
+
+function updateThemeMeta() {
+  var meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute("content", currentThemeIsDark() ? "#0b1020" : "#f4f6fb");
+}
+
+function cycleTheme() {
+  var order = ["auto", "light", "dark"];
+  var next = order[(order.indexOf(state.theme) + 1) % order.length];
+  applyTheme(next);
+  haptic();
+  toast(t("theme") + ": " + t("theme_" + next));
+  if (state.chart) drawChart(state.chart.activeIndex);
+}
+
+/* ================= язык ================= */
+
+function applyLang(lang, firstRun) {
+  if (!translations[lang]) lang = "ru";
+  state.lang = lang;
+  saveJSON("abuev_lang", lang);
+
+  document.documentElement.lang = lang;
+  document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
+  document.title = t("app_title") + " — " + t("app_subtitle");
+
+  var select = $("#langSelect");
+  if (select) select.value = lang;
+
+  translateStatic();
+  if (typeof setTabsExpanded === "function") setTabsExpanded(state.tabsOpen);
+
+  var amt = $("#amt");
+  if (amt) amt.setAttribute("aria-label", t("amount"));
+
+  applyAriaLabels();
+  renderTabs();
+  renderList();
+  renderRates();
+  renderSegThumbs();
+
+  if (!firstRun) {
+    var st = $("#status");
+    if (st) {
+      st.textContent = state.updatedAt
+        ? t("updated_at") + " · " + formatTime(state.updatedAt, state.lang)
+        : t("status_error");
     }
-    if (x.c !== from) { rightPart.appendChild(shareBtn); }
-    d.appendChild(leftPart); d.appendChild(rightPart);
-    listContainer.appendChild(d);
-    let mainVal = rightPart.querySelector('.val-main');
-    if (mainVal) {
-      if(typeof animateValue === 'function') { animateValue(mainVal, 0, v, 400, x.c === "RUB" ? "" : x.c); }
-      else { mainVal.innerHTML = fmt(v,2) + (x.c === "RUB" ? "" : " " + x.c); }
-    }
-    if (currentView === 'crypto' && x.c !== "RUB") {
-      let rubSec = rightPart.querySelector('.val-sec');
-      if (rubSec) { rubSec.innerHTML = '≈ ' + fmt(vRub, 0) + ' RUB'; }
-    }
+  }
+
+  if (state.chart) {
+    updateChartHeader();
+    renderChartStats(state.chart.series || []);
+    drawChart(state.chart.activeIndex);
+  }
+}
+
+function translateStatic() {
+  $$("[data-i18n]").forEach(function (el) {
+    var key = el.getAttribute("data-i18n");
+    if (translations[state.lang][key]) el.textContent = translations[state.lang][key];
+  });
+  $$("[data-i18n-ph]").forEach(function (el) {
+    var key = el.getAttribute("data-i18n-ph");
+    if (translations[state.lang][key]) el.placeholder = translations[state.lang][key];
+  });
+  $$("[data-i18n-title]").forEach(function (el) {
+    var key = el.getAttribute("data-i18n-title");
+    if (translations[state.lang][key]) el.title = translations[state.lang][key];
   });
 }
 
-function save(){try{localStorage.setItem("fx_rates",JSON.stringify(rates));}catch(e){}}
-function renderRates(){rbox.innerHTML="";var listToShow=activeList.filter(function(x){return x.c!=="RUB";});listToShow.slice(0,6).forEach(function(x){var w=document.createElement("div");var l=document.createElement("label");l.textContent="1 "+x.c+" ("+(translations[currentLang].rates_to_rub)+")";var i=document.createElement("input");i.type="text";i.inputMode="decimal";i.value=String(rates[x.c].toFixed(4)).replace(".",",");i.oninput=function(){var v=num(i.value);if(v>0){rates[x.c]=v;save();renderOut();}};w.appendChild(l);w.appendChild(i);rbox.appendChild(w);});}
-amt.oninput=renderOut;
-if(searchInput) { searchInput.oninput = function() { searchQuery = this.value; renderOut(); }; }
-
-function fetchWithTimeout(url,timeout){timeout=timeout||2500;return Promise.race([fetch(url,{cache:"no-store"}),new Promise(function(_,reject){setTimeout(function(){reject(new Error("timeout"));},timeout);})]);}
-function fetchRates(){return fetchWithTimeout("https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json").then(function(r){return r.json();}).then(function(j){var R=j.usd;if(!R||!R.rub)throw new Error("data");rates.USD=R.rub;FIAT.forEach(function(item){if(item.c!=="USD"&&item.c!=="RUB"&&R[item.c.toLowerCase()])rates[item.c]=R.rub/R[item.c.toLowerCase()];});CRYPTO.forEach(function(item){if(item.c==="USDT")rates[item.c]=R.rub;else if(R[item.c.toLowerCase()])rates[item.c]=R.rub/R[item.c.toLowerCase()];});return translations[currentLang].status_updated;});}
-
-function load(){
-  btn.blur(); 
-  btn.disabled=true;
-  btnIcon.innerHTML='<span class="spinner"></span>';
-  btnText.textContent=translations[currentLang].btn_loading;
-  st.textContent=translations[currentLang].status_loading;
-  fetchRates().then(function(label){
-    save(); renderRates(); renderOut();
-    st.textContent=label+" ("+new Date().toLocaleTimeString().slice(0,5)+")";
-  }).catch(function(){ st.textContent=translations[currentLang].status_error; })
-    .finally(function(){ btn.disabled=false; btnIcon.innerHTML=''; btnText.textContent=translations[currentLang].btn_update; });
+function applyAriaLabels() {
+  var map = [
+    ["#themeBtn", "theme"],
+    ["#installBtn", "install"],
+    ["#closeChart", "close"],
+    ["#searchInput", "search_ph"],
+    ["#ratesSearch", "rates_search_ph"],
+    ["#swapBtn", "base_label"]
+  ];
+  map.forEach(function (pair) {
+    var el = $(pair[0]);
+    if (el) el.setAttribute("aria-label", t(pair[1]));
+  });
 }
 
-btn.onclick=load;
-function openChart(currency){modal.classList.add("show");chartTitle.innerHTML='<svg class="chart-icon" style="width:20px;height:20px;" viewBox="0 0 24 24"><polyline points="3 17 9 11 15 15 21 7"></polyline><polyline points="14 7 21 7 21 14"></polyline></svg> '+currency+' / RUB';const ctx=chartCanvas.getContext("2d");ctx.clearRect(0,0,chartCanvas.width,chartCanvas.height);const dpr=window.devicePixelRatio||1;const w=chartCanvas.offsetWidth;const h=chartCanvas.offsetHeight;chartCanvas.width=w*dpr;chartCanvas.height=h*dpr;ctx.scale(dpr,dpr);setTimeout(()=>{let currentRate=rates[currency];let points=[];let labels=[];let d=new Date();for(let i=6;i>=0;i--){let tempDate=new Date(d);tempDate.setDate(d.getDate()-i);labels.push(tempDate.getDate()+"."+(tempDate.getMonth()+1));let volatility=(currentView==='crypto')?0.08:0.02;let fluctuation=1+(Math.random()-0.5)*volatility;points.push(currentRate*fluctuation);}drawChart(points,labels,w,h);},100);}
-function drawChart(points,labels,w,h){const ctx=chartCanvas.getContext("2d");const pl=10,pr=10,pt=20,pb=30;const max=Math.max(...points);const min=Math.min(...points);const range=max-min||1;ctx.clearRect(0,0,w,h);let stepX=(w-pl-pr)/(points.length-1);let coords=points.map((p,i)=>({x:pl+i*stepX,y:h-pb-((p-min)/range)*(h-pt-pb)}));ctx.strokeStyle=getComputedStyle(document.body).getPropertyValue('--line').trim();ctx.lineWidth=1;for(let i=0;i<=3;i++){let y=pt+(h-pt-pb)*(i/3);ctx.beginPath();ctx.moveTo(pl,y);ctx.lineTo(w-pr,y);ctx.stroke();}let gradient=ctx.createLinearGradient(0,pt,0,h-pb);gradient.addColorStop(0,"rgba(124, 147, 255, 0.4)");gradient.addColorStop(1,"rgba(124, 147, 255, 0)");ctx.beginPath();ctx.strokeStyle=getComputedStyle(document.body).getPropertyValue('--accent').trim();ctx.lineWidth=3;ctx.lineJoin="round";ctx.lineCap="round";ctx.moveTo(coords[0].x,coords[0].y);for(let i=0;i<coords.length-1;i++){let midX=(coords[i].x+coords[i+1].x)/2;ctx.bezierCurveTo(midX,coords[i].y,midX,coords[i+1].y,coords[i+1].x,coords[i+1].y);}ctx.stroke();ctx.lineTo(coords[coords.length-1].x,h-pb);ctx.lineTo(coords[0].x,h-pb);ctx.closePath();ctx.fillStyle=gradient;ctx.fill();coords.forEach((c,i)=>{ctx.beginPath();ctx.arc(c.x,c.y,4,0,Math.PI*2);ctx.fillStyle=getComputedStyle(document.body).getPropertyValue('--card').trim();ctx.fill();ctx.strokeStyle=getComputedStyle(document.body).getPropertyValue('--accent').trim();ctx.lineWidth=2;ctx.stroke();});ctx.fillStyle=getComputedStyle(document.body).getPropertyValue('--muted').trim();ctx.font='10px Inter, sans-serif';ctx.textAlign="center";coords.forEach((c,i)=>{ctx.fillText(labels[i],c.x,h-10);ctx.fillStyle=getComputedStyle(document.body).getPropertyValue('--text').trim();ctx.font='bold 9px Inter, sans-serif';let priceVal=points[i];let priceText=priceVal>10000?(priceVal/1000).toFixed(0)+'k':priceVal.toFixed(1);ctx.fillText(priceText,c.x,h-22);ctx.fillStyle=getComputedStyle(document.body).getPropertyValue('--muted').trim();ctx.font='10px Inter, sans-serif';});}
-closeChart.onclick=function(){modal.classList.remove("show");};modal.onclick=function(e){if(e.target===modal)modal.classList.remove("show");};
+/* ================= вкладки базовой валюты ================= */
 
-changeLang(currentLang);switchTab('fiat');load();
-if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('./sw.js').catch(function(){});});}
+function activeList() {
+  return state.view === "crypto" ? CRYPTO : FIAT;
+}
+
+function renderTabs() {
+  var wrap = $("#tabs");
+  if (!wrap) return;
+  var fragment = document.createDocumentFragment();
+  FIAT.forEach(function (item) {
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "tab" + (item.c === state.base ? " on" : "");
+    btn.textContent = item.c;
+    btn.setAttribute("aria-pressed", item.c === state.base ? "true" : "false");
+    btn.setAttribute("aria-label", currencyName(item, state.lang));
+    btn.addEventListener("click", function () {
+      haptic();
+      setBase(item.c);
+    });
+    fragment.appendChild(btn);
+  });
+  wrap.textContent = "";
+  wrap.appendChild(fragment);
+
+  var badge = $("#baseCode");
+  if (badge) badge.textContent = state.base;
+}
+
+function setBase(code) {
+  state.base = code;
+  saveJSON("abuev_base", code);
+  renderTabs();
+  renderList();
+}
+
+/* ================= список конвертации ================= */
+
+function matchesQuery(item, query) {
+  if (!query) return true;
+  var q = query.toLowerCase();
+  if (item.c.toLowerCase().indexOf(q) > -1) return true;
+  var name = currencyName(item, state.lang).toLowerCase();
+  if (name.indexOf(q) > -1) return true;
+  if (item.n && item.n.en && item.n.en.toLowerCase().indexOf(q) > -1) return true;
+  return false;
+}
+
+function convert(amount, from, to) {
+  var rf = state.rates[from] || 0;
+  var rt = state.rates[to] || 0;
+  if (!rf || !rt) return 0;
+  return amount * rf / rt;
+}
+
+function renderList(animate) {
+  var listEl = $("#list");
+  var emptyEl = $("#empty");
+  if (!listEl) return;
+
+  var query = state.query.trim();
+  var items = activeList().filter(function (item) { return matchesQuery(item, query); });
+  items = sortFavorites(items);
+
+  listEl.textContent = "";
+  if (emptyEl) emptyEl.hidden = items.length > 0;
+
+  var amount = parseAmount($("#amt") ? $("#amt").value : 0);
+  var calc = amount > 0 ? amount : 1;
+  var fragment = document.createDocumentFragment();
+
+  items.forEach(function (item) {
+    fragment.appendChild(buildRow(item, calc, amount, animate !== false));
+  });
+
+  listEl.appendChild(fragment);
+  staggerIn(listEl);
+  renderSegThumbs();
+}
+
+function buildRow(item, calcAmount, realAmount, animate) {
+  var isBase = item.c === state.base;
+  var value = isBase ? calcAmount : convert(calcAmount, state.base, item.c);
+  var one = convert(1, state.base, item.c);
+  var rubValue = convert(value, item.c, "RUB");
+  var fav = state.favorites.indexOf(item.c) > -1;
+
+  var row = document.createElement("article");
+  row.className = "row" + (isBase ? " src" : "");
+  row.setAttribute("role", "listitem");
+  row.setAttribute("data-code", item.c);
+
+  /* звезда */
+  var star = document.createElement("button");
+  star.type = "button";
+  star.className = "star" + (fav ? " on" : "");
+  star.setAttribute("aria-pressed", fav ? "true" : "false");
+  star.setAttribute("aria-label", fav ? t("remove_fav") : t("add_fav"));
+  star.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.7 5.9 6.3.7-4.7 4.3 1.3 6.2L12 17l-5.6 3.1 1.3-6.2L3 9.6l6.3-.7z"/></svg>';
+  star.addEventListener("click", function (event) {
+    event.stopPropagation();
+    toggleFavorite(item.c);
+  });
+
+  /* название */
+  var main = document.createElement("div");
+  main.className = "row-main";
+  if (!isBase) {
+    main.addEventListener("click", function () { openChart(item.c); });
+    main.setAttribute("role", "button");
+    main.setAttribute("tabindex", "0");
+    main.addEventListener("keydown", function (event) {
+      if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openChart(item.c); }
+    });
+  }
+
+  var code = document.createElement("div");
+  code.className = "row-code";
+  code.appendChild(document.createTextNode(item.c));
+  if (!isBase) {
+    code.insertAdjacentHTML("beforeend",
+      '<svg class="row-chart" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 16.5 9 10l5 4 7-8"/><path d="M15 6h6v6"/></svg>');
+  }
+
+  var sym = document.createElement("span");
+  sym.className = "row-sym";
+  sym.textContent = item.s;
+  code.insertBefore(sym, code.firstChild);
+
+  var name = document.createElement("div");
+  name.className = "row-name";
+  name.textContent = currencyName(item, state.lang);
+
+  main.appendChild(code);
+  main.appendChild(name);
+
+  /* значение */
+  var valueBox = document.createElement("div");
+  valueBox.className = "row-value";
+  valueBox.setAttribute("role", "button");
+  valueBox.setAttribute("tabindex", "0");
+
+  var valueLine = document.createElement("div");
+  valueLine.className = "value";
+
+  var num = document.createElement("span");
+  num.className = "num";
+  valueLine.appendChild(num);
+
+  var unit = document.createElement("small");
+  unit.textContent = item.s;
+  valueLine.appendChild(unit);
+
+  var per = document.createElement("div");
+  per.className = "per";
+  if (isBase) {
+    per.textContent = "≈ " + formatShort(convert(calcAmount, item.c, "RUB"), state.lang) + " ₽";
+  } else if (state.view === "crypto" && item.c !== "RUB") {
+    per.textContent = "≈ " + formatShort(rubValue, state.lang) + " ₽";
+  } else {
+    per.textContent = "1 " + state.base + " = " + formatShort(one, state.lang) + " " + item.c;
+  }
+
+  valueBox.appendChild(valueLine);
+  valueBox.appendChild(per);
+
+  function copyValue() {
+    var text = formatMoney(value, state.lang) + " " + item.c;
+    copyText(text).then(function (ok) { toast(ok ? t("toast_copied") : t("toast_copy_error")); });
+  }
+  valueBox.addEventListener("click", copyValue);
+  valueBox.addEventListener("keydown", function (event) {
+    if (event.key === "Enter" || event.key === " ") { event.preventDefault(); copyValue(); }
+  });
+
+  /* поделиться */
+  var share = document.createElement("button");
+  share.type = "button";
+  share.className = "row-share";
+  share.setAttribute("aria-label", t("share"));
+  share.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="m8.3 10.7 7.4-4.3M8.3 13.3l7.4 4.3"/></svg>';
+  share.addEventListener("click", function (event) {
+    event.stopPropagation();
+    haptic();
+    var total = isBase ? calcAmount : value;
+    var text = formatMoney(isBase ? realAmount || calcAmount : total, state.lang) + " " + state.base +
+      " = " + formatMoney(total, state.lang) + " " + item.c;
+    shareResult(text);
+  });
+
+  row.appendChild(star);
+  row.appendChild(main);
+  row.appendChild(valueBox);
+  row.appendChild(share);
+
+  countUpIfNeeded(num, value, state.lang, animate);
+  return row;
+}
+
+function countUpIfNeeded(el, value, lang, animate) {
+  if (animate) countUp(el, value, lang);
+  else el.textContent = formatMoney(value, lang);
+}
+
+function toggleFavorite(code) {
+  var index = state.favorites.indexOf(code);
+  if (index > -1) state.favorites.splice(index, 1);
+  else {
+    state.favorites.push(code);
+    haptic();
+  }
+  saveJSON("abuev_favorites", state.favorites);
+  renderList(false);
+}
+
+/* ================= экран курсов ================= */
+
+function renderRates() {
+  var wrap = $("#ratesList");
+  if (!wrap) return;
+  var query = state.ratesQuery.trim();
+  var items = FIAT.concat(CRYPTO).filter(function (item) { return matchesQuery(item, query); });
+
+  wrap.textContent = "";
+  if (!items.length) {
+    var empty = document.createElement("p");
+    empty.className = "empty";
+    empty.textContent = t("no_results");
+    wrap.appendChild(empty);
+    return;
+  }
+
+  items.forEach(function (item) {
+    var row = document.createElement("div");
+    row.className = "rate-row";
+
+    var label = document.createElement("div");
+    var code = document.createElement("span");
+    code.className = "rate-code";
+    code.textContent = item.c;
+    var name = document.createElement("span");
+    name.className = "rate-name";
+    name.textContent = currencyName(item, state.lang);
+    label.appendChild(code);
+    label.appendChild(name);
+
+    var input = document.createElement("input");
+    input.className = "rate-input";
+    input.type = "text";
+    input.inputMode = "decimal";
+    input.value = formatNumber(state.rates[item.c] || 0, state.lang, 2, 4);
+    input.setAttribute("aria-label", item.c + " — " + currencyName(item, state.lang) + " / RUB");
+    input.addEventListener("input", function () {
+      var parsed = parseAmount(input.value);
+      if (parsed > 0) {
+        state.rates[item.c] = parsed;
+        saveJSON("abuev_rates", state.rates);
+        saveJSON("abuev_rates_at", state.updatedAt);
+        renderList(false);
+      }
+    });
+    input.addEventListener("blur", function () {
+      input.value = formatNumber(state.rates[item.c] || 0, state.lang, 2, 4);
+    });
+
+    row.appendChild(label);
+    row.appendChild(input);
+    wrap.appendChild(row);
+  });
+}
+
+/* ================= загрузка курсов ================= */
+
+function fetchJSON(urls, timeoutMs) {
+  var list = urls.slice();
+  var timeout = timeoutMs || 9000;
+
+  function attempt(index) {
+    if (index >= list.length) return Promise.reject(new Error("network"));
+    var controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+    var timer = setTimeout(function () { if (controller) controller.abort(); }, timeout);
+    return fetch(list[index], { cache: "no-store", signal: controller ? controller.signal : undefined })
+      .then(function (response) {
+        clearTimeout(timer);
+        if (!response.ok) throw new Error("http " + response.status);
+        return response.json();
+      })
+      .catch(function (error) {
+        clearTimeout(timer);
+        return attempt(index + 1);
+      });
+  }
+  return attempt(0);
+}
+
+async function fetchRates() {
+  var data = await fetchJSON(RATES_URLS);
+  var usd = data && data.usd;
+  if (!usd || !(usd.rub > 0)) throw new Error("bad payload");
+
+  var next = {};
+  FIAT.concat(CRYPTO).forEach(function (item) {
+    if (item.c === "RUB") { next.RUB = 1; return; }
+    var rate = usd[item.c.toLowerCase()];
+    if (rate > 0) next[item.c] = usd.rub / rate;
+  });
+  next.RUB = 1;
+  if (!next.USD) next.USD = usd.rub;
+
+  Object.keys(next).forEach(function (code) {
+    if (next[code] > 0) state.rates[code] = next[code];
+  });
+  state.apiRates = Object.assign({}, state.rates);
+  state.updatedAt = Date.now();
+  saveJSON("abuev_rates", state.rates);
+  saveJSON("abuev_rates_at", state.updatedAt);
+}
+
+async function syncRates(options) {
+  var opts = options || {};
+  if (state.loading) return;
+  state.loading = true;
+  setButtonState(true);
+  updateStatus(t("status_loading"));
+
+  try {
+    await fetchRates();
+    renderRates();
+    renderList(false);
+    updateStatus(t("status_updated") + " · " + formatTime(state.updatedAt, state.lang));
+    if (!opts.silent) toast(t("status_updated"));
+  } catch (error) {
+    updateStatus(t("status_error"));
+  } finally {
+    state.loading = false;
+    setButtonState(false);
+  }
+}
+
+function setButtonState(loading) {
+  var btn = $("#updateBtn");
+  var spinner = $("#btnSpinner");
+  var text = $("#btnText");
+  if (btn) btn.disabled = loading;
+  if (spinner) spinner.hidden = !loading;
+  if (text) text.textContent = loading ? t("btn_loading") : t("btn_update");
+}
+
+function updateStatus(text) {
+  var el = $("#status");
+  if (el) el.textContent = text;
+}
+
+/* ================= график ================= */
+
+function todayISO(offsetDays) {
+  var date = new Date();
+  date.setDate(date.getDate() + offsetDays);
+  var y = date.getFullYear();
+  var m = String(date.getMonth() + 1).padStart(2, "0");
+  var d = String(date.getDate()).padStart(2, "0");
+  return y + "-" + m + "-" + d;
+}
+
+function historyURLs(dateISO) {
+  var datePart = dateISO === todayISO(0) ? "latest" : dateISO;
+  return [
+    "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@" + datePart + "/v1/currencies/usd.min.json",
+    "https://" + datePart + ".currency-api.pages.dev/v1/currencies/usd.min.json"
+  ];
+}
+
+var dayCache = {};
+
+async function fetchDayUsd(dateISO) {
+  if (dayCache[dateISO]) return dayCache[dateISO];
+  var data = await fetchJSON(historyURLs(dateISO), 8000);
+  if (data && data.usd) dayCache[dateISO] = data.usd;
+  return dayCache[dateISO] || null;
+}
+
+async function loadSeries(code, days) {
+  var cacheKey = "abuev_hist_" + code + "_" + days;
+  var cached = loadJSON(cacheKey, null);
+  if (cached && cached.at && Date.now() - cached.at < HISTORY_CACHE_MS && Array.isArray(cached.points)) {
+    return cached.points.map(function (p) { return { date: p[0], value: p[1] }; });
+  }
+
+  var step = days > 10 ? 2 : 1;
+  var offsets = [];
+  for (var i = days - 1; i >= 0; i -= step) offsets.push(-i);
+  if (offsets[offsets.length - 1] !== 0) offsets.push(0);
+
+  var results = await Promise.all(offsets.map(async function (offset) {
+    var dateISO = todayISO(offset);
+    try {
+      var usd = await fetchDayUsd(dateISO);
+      if (!usd) return null;
+      var rub = usd.rub;
+      var rate = code === "RUB" ? 1 : usd[code.toLowerCase()];
+      if (!(rub > 0) || !(rate > 0)) return null;
+      return { date: dateISO, value: rub / rate };
+    } catch (error) {
+      return null;
+    }
+  }));
+
+  var points = results.filter(Boolean);
+  if (points.length) {
+    saveJSON(cacheKey, { at: Date.now(), points: points.map(function (p) { return [p.date, p.value]; }) });
+  }
+  return points;
+}
+
+function updateChartHeader() {
+  var chart = state.chart;
+  if (!chart) return;
+  var item = FIAT.concat(CRYPTO).filter(function (x) { return x.c === chart.code; })[0];
+  var title = $("#chartTitle");
+  var subtitle = $("#chartSubtitle");
+  if (title) title.textContent = chart.code + " / RUB";
+  if (subtitle) subtitle.textContent = item ? currencyName(item, state.lang) : "";
+}
+
+async function openChart(code) {
+  var modal = $("#chartModal");
+  state.chart = { code: code, days: 7, series: [], activeIndex: -1 };
+  updateChartHeader();
+  setPeriodButtons(7);
+  renderChartStats([]);
+  showChartState(t("chart_loading"));
+  clearCanvas();
+
+  if (modal) {
+    modal.classList.add("open");
+    modal.setAttribute("aria-hidden", "false");
+    document.body.style.overflow = "hidden";
+    var closeBtn = $("#closeChart");
+    if (closeBtn) closeBtn.focus({ preventScroll: true });
+  }
+
+  try {
+    var series = await loadSeries(code, 7);
+    if (!state.chart || state.chart.code !== code) return;
+    state.chart.series = series;
+    if (!series.length) {
+      showChartState(t("chart_error"));
+      return;
+    }
+    hideChartState();
+    renderChartStats(series);
+    drawChart(-1);
+  } catch (error) {
+    showChartState(t("chart_error"));
+  }
+}
+
+function closeChart() {
+  var modal = $("#chartModal");
+  if (!modal) return;
+  modal.classList.remove("open");
+  modal.setAttribute("aria-hidden", "true");
+  document.body.style.overflow = "";
+  state.chart = null;
+}
+
+function showChartState(text) {
+  var el = $("#chartState");
+  if (!el) return;
+  el.textContent = text;
+  el.classList.remove("hidden");
+}
+
+function hideChartState() {
+  var el = $("#chartState");
+  if (el) el.classList.add("hidden");
+}
+
+function clearCanvas() {
+  var canvas = $("#chartCanvas");
+  if (!canvas) return;
+  var ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  var tip = $("#chartTip");
+  if (tip) tip.hidden = true;
+}
+
+function renderChartStats(series) {
+  var box = $("#chartStats");
+  if (!box) return;
+  box.textContent = "";
+  if (!series || !series.length) return;
+
+  var values = series.map(function (p) { return p.value; });
+  var min = Math.min.apply(null, values);
+  var max = Math.max.apply(null, values);
+  var first = values[0];
+  var last = values[values.length - 1];
+  var change = first ? (last - first) / first * 100 : 0;
+
+  function stat(label, text, cls) {
+    var div = document.createElement("div");
+    div.className = "stat" + (cls ? " " + cls : "");
+    var l = document.createElement("span");
+    l.className = "stat-label";
+    l.textContent = label;
+    var v = document.createElement("span");
+    v.className = "stat-value";
+    v.textContent = text;
+    div.appendChild(l);
+    div.appendChild(v);
+    return div;
+  }
+
+  box.appendChild(stat(t("chart_min"), formatMoney(min, state.lang) + " ₽"));
+  box.appendChild(stat(t("chart_max"), formatMoney(max, state.lang) + " ₽"));
+
+  var sign = change > 0 ? "+" : "";
+  var changeText = sign + formatNumber(change, state.lang, 1, 2) + "%";
+  var changeEl = stat(t("chart_change"), changeText, change > 0 ? "up" : change < 0 ? "down" : "");
+  box.appendChild(changeEl);
+}
+
+function hexToRgba(hex, alpha) {
+  var clean = hex.replace("#", "").trim();
+  if (clean.length === 3) clean = clean.split("").map(function (c) { return c + c; }).join("");
+  var num = parseInt(clean, 16);
+  if (!isFinite(num)) return "rgba(59,91,219," + alpha + ")";
+  var r = (num >> 16) & 255;
+  var g = (num >> 8) & 255;
+  var b = num & 255;
+  return "rgba(" + r + "," + g + "," + b + "," + alpha + ")";
+}
+
+function cssVar(name) {
+  return getComputedStyle(document.body).getPropertyValue(name).trim() || "#3b5bdb";
+}
+
+function drawChart(activeIndex) {
+  var canvas = $("#chartCanvas");
+  var box = $("#chartBox");
+  var chart = state.chart;
+  if (!canvas || !box || !chart || !chart.series || chart.series.length < 2) return;
+
+  var series = chart.series;
+  var rect = box.getBoundingClientRect();
+  var width = Math.max(rect.width, 240);
+  var height = Math.max(rect.height, 170);
+  var dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+
+  if (canvas.width !== Math.round(width * dpr) || canvas.height !== Math.round(height * dpr)) {
+    canvas.width = Math.round(width * dpr);
+    canvas.height = Math.round(height * dpr);
+  }
+  canvas.style.width = width + "px";
+  canvas.style.height = height + "px";
+
+  var ctx = canvas.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, width, height);
+
+  var pad = { top: 18, right: 10, bottom: 26, left: 10 };
+  var innerW = width - pad.left - pad.right;
+  var innerH = height - pad.top - pad.bottom;
+
+  var values = series.map(function (p) { return p.value; });
+  var min = Math.min.apply(null, values);
+  var max = Math.max.apply(null, values);
+  if (min === max) { min *= 0.99; max *= 1.01; }
+  var padding = (max - min) * 0.12;
+  min -= padding;
+  max += padding;
+
+  var accent = cssVar("--accent") || "#3b5bdb";
+  var lineColor = cssVar("--line") || "#e4e9f4";
+  var muted = cssVar("--muted") || "#657092";
+  var card = cssVar("--card") || "#ffffff";
+
+  var x = function (i) { return pad.left + (innerW * i) / (series.length - 1); };
+  var y = function (v) { return pad.top + innerH - ((v - min) / (max - min)) * innerH; };
+
+  /* сетка и подписи по Y */
+  ctx.strokeStyle = lineColor;
+  ctx.lineWidth = 1;
+  ctx.setLineDash([3, 4]);
+  ctx.font = "10px Inter, sans-serif";
+  ctx.textAlign = "left";
+  for (var g = 0; g <= 2; g++) {
+    var gy = pad.top + (innerH * g) / 2;
+    ctx.beginPath();
+    ctx.moveTo(pad.left, gy);
+    ctx.lineTo(width - pad.right, gy);
+    ctx.stroke();
+    var labelValue = max - ((max - min) * g) / 2;
+    ctx.fillStyle = muted;
+    ctx.fillText(formatCompact(labelValue, state.lang), pad.left + 3, gy - 6);
+  }
+  ctx.setLineDash([]);
+
+  /* заливка */
+  var gradient = ctx.createLinearGradient(0, pad.top, 0, height - pad.bottom);
+  gradient.addColorStop(0, hexToRgba(accent, 0.30));
+  gradient.addColorStop(1, hexToRgba(accent, 0));
+  ctx.beginPath();
+  ctx.moveTo(x(0), y(values[0]));
+  for (var i = 1; i < series.length; i++) {
+    var prevX = x(i - 1), curX = x(i);
+    var midX = (prevX + curX) / 2;
+    ctx.bezierCurveTo(midX, y(values[i - 1]), midX, y(values[i]), curX, y(values[i]));
+  }
+  ctx.lineTo(x(series.length - 1), height - pad.bottom);
+  ctx.lineTo(x(0), height - pad.bottom);
+  ctx.closePath();
+  ctx.fillStyle = gradient;
+  ctx.fill();
+
+  /* линия */
+  ctx.beginPath();
+  ctx.moveTo(x(0), y(values[0]));
+  for (var j = 1; j < series.length; j++) {
+    var px = x(j - 1), cx = x(j);
+    var mx = (px + cx) / 2;
+    ctx.bezierCurveTo(mx, y(values[j - 1]), mx, y(values[j]), cx, y(values[j]));
+  }
+  ctx.strokeStyle = accent;
+  ctx.lineWidth = 2.5;
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  ctx.stroke();
+
+  /* точки */
+  ctx.fillStyle = card;
+  ctx.strokeStyle = accent;
+  ctx.lineWidth = 2;
+  for (var d = 0; d < series.length; d++) {
+    ctx.beginPath();
+    ctx.arc(x(d), y(values[d]), d === activeIndex ? 5 : 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+  }
+
+  /* подписи дат */
+  ctx.fillStyle = muted;
+  ctx.font = "10px Inter, sans-serif";
+  ctx.textAlign = "center";
+  var labelIndexes = [0, Math.floor((series.length - 1) / 2), series.length - 1];
+  labelIndexes.forEach(function (idx, order) {
+    var date = new Date(series[idx].date + "T00:00:00");
+    ctx.textAlign = order === 0 ? "left" : order === labelIndexes.length - 1 ? "right" : "center";
+    ctx.fillText(formatDayMonth(date, state.lang), x(idx), height - 8);
+  });
+
+  chart.points = series.map(function (p, idx) { return { x: x(idx), y: y(p.value), value: p.value, date: p.date }; });
+  chart.activeIndex = activeIndex;
+
+  /* подсветка выбранной точки */
+  if (activeIndex > -1 && chart.points[activeIndex]) {
+    var pt = chart.points[activeIndex];
+    ctx.strokeStyle = hexToRgba(accent, 0.45);
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(pt.x, pad.top);
+    ctx.lineTo(pt.x, height - pad.bottom);
+    ctx.stroke();
+  }
+}
+
+function handleChartPointer(event) {
+  var chart = state.chart;
+  var box = $("#chartBox");
+  var tip = $("#chartTip");
+  if (!chart || !chart.points || !chart.points.length || !box || !tip) return;
+
+  var rect = box.getBoundingClientRect();
+  var px = event.clientX - rect.left;
+  var nearest = 0;
+  var best = Infinity;
+  chart.points.forEach(function (point, index) {
+    var distance = Math.abs(point.x - px);
+    if (distance < best) { best = distance; nearest = index; }
+  });
+
+  var point = chart.points[nearest];
+  var date = new Date(point.date + "T00:00:00");
+  tip.textContent = formatDayMonth(date, state.lang) + " · " + formatMoney(point.value, state.lang) + " ₽";
+  tip.style.left = point.x + "px";
+  tip.style.top = point.y + "px";
+  tip.hidden = false;
+
+  if (chart.activeIndex !== nearest) drawChart(nearest);
+}
+
+function hideChartTip() {
+  var tip = $("#chartTip");
+  if (tip) tip.hidden = true;
+  if (state.chart) drawChart(-1);
+}
+
+function setPeriodButtons(days) {
+  $$("#periodSeg .seg-btn").forEach(function (btn) {
+    var on = Number(btn.getAttribute("data-days")) === days;
+    btn.classList.toggle("on", on);
+    btn.setAttribute("aria-selected", on ? "true" : "false");
+  });
+  moveThumb("#periodSeg", "#periodThumb");
+}
+
+async function changePeriod(days) {
+  if (!state.chart) return;
+  state.chart.days = days;
+  setPeriodButtons(days);
+  showChartState(t("chart_loading"));
+  hideChartTip();
+  renderChartStats([]);
+
+  try {
+    var series = await loadSeries(state.chart.code, days);
+    if (!state.chart) return;
+    state.chart.series = series;
+    if (!series.length) { showChartState(t("chart_error")); return; }
+    hideChartState();
+    renderChartStats(series);
+    drawChart(-1);
+  } catch (error) {
+    showChartState(t("chart_error"));
+  }
+}
+
+/* ================= навигация ================= */
+
+function switchScreen(name, button) {
+  state.screen = name;
+  $$(".screen").forEach(function (screen) {
+    screen.classList.toggle("active", screen.id === "screen-" + name);
+  });
+  $$(".nav-item").forEach(function (item) {
+    item.classList.toggle("active", item.getAttribute("data-screen") === name);
+  });
+  moveNavPill(button || $('.nav-item[data-screen="' + name + '"]'));
+  window.scrollTo({ top: 0, behavior: prefersReducedMotion ? "auto" : "smooth" });
+}
+
+function setView(view) {
+  state.view = view;
+  $$("#viewSeg .seg-btn").forEach(function (btn) {
+    var on = btn.getAttribute("data-view") === view;
+    btn.classList.toggle("on", on);
+    btn.setAttribute("aria-selected", on ? "true" : "false");
+  });
+  moveThumb("#viewSeg", "#segThumb");
+  renderList();
+}
+
+function moveThumb(segSelector, thumbSelector) {
+  var seg = $(segSelector);
+  var thumb = $(thumbSelector);
+  if (!seg || !thumb) return;
+  var active = seg.querySelector(".seg-btn.on");
+  if (!active) return;
+  var segRect = seg.getBoundingClientRect();
+  var rect = active.getBoundingClientRect();
+  thumb.style.width = rect.width + "px";
+  thumb.style.transform = "translateX(" + (rect.left - segRect.left - 3) + "px)";
+}
+
+function renderSegThumbs() {
+  moveThumb("#viewSeg", "#segThumb");
+  if (state.chart) moveThumb("#periodSeg", "#periodThumb");
+  var first = document.querySelector('.nav-item.active');
+  if (first) moveNavPill(first);
+}
+
+/* ================= подключение / SW ================= */
+
+function watchConnection() {
+  var bar = $("#offlineBar");
+  function update() {
+    if (!bar) return;
+    bar.hidden = navigator.onLine;
+  }
+  window.addEventListener("online", function () {
+    update();
+    syncRates({ silent: true });
+  });
+  window.addEventListener("offline", update);
+  update();
+}
+
+function registerServiceWorker() {
+  if (!("serviceWorker" in navigator)) return;
+  window.addEventListener("load", function () {
+    navigator.serviceWorker.register("./sw.js").catch(function () {});
+  });
+}
+
+/* ================= события ================= */
+
+function bindEvents() {
+  var amt = $("#amt");
+  if (amt) {
+    amt.addEventListener("input", function () {
+      renderList(false);
+    });
+    amt.addEventListener("focus", function () { amt.select(); });
+  }
+
+  var themeBtn = $("#themeBtn");
+  if (themeBtn) themeBtn.addEventListener("click", cycleTheme);
+
+  var langSelect = $("#langSelect");
+  if (langSelect) {
+    langSelect.addEventListener("change", function () {
+      applyLang(langSelect.value, false);
+    });
+  }
+
+  var expandBtn = $("#expandBtn");
+  if (expandBtn) {
+    expandBtn.addEventListener("click", function () {
+      haptic();
+      setTabsExpanded(!state.tabsOpen);
+    });
+  }
+
+  var search = $("#searchInput");
+  var clearSearch = $("#clearSearch");
+  if (search) {
+    search.addEventListener("input", function () {
+      state.query = search.value;
+      if (clearSearch) clearSearch.hidden = !search.value;
+      renderList(false);
+    });
+  }
+  if (clearSearch) {
+    clearSearch.addEventListener("click", function () {
+      if (!search) return;
+      search.value = "";
+      state.query = "";
+      clearSearch.hidden = true;
+      renderList(false);
+      search.focus();
+    });
+  }
+
+  var ratesSearch = $("#ratesSearch");
+  if (ratesSearch) {
+    ratesSearch.addEventListener("input", function () {
+      state.ratesQuery = ratesSearch.value;
+      renderRates();
+    });
+  }
+
+  var updateBtn = $("#updateBtn");
+  if (updateBtn) {
+    updateBtn.addEventListener("click", function () { haptic(); syncRates(); });
+  }
+
+  var resetBtn = $("#resetRates");
+  if (resetBtn) {
+    resetBtn.addEventListener("click", function () {
+      haptic();
+      state.rates = Object.assign({}, state.apiRates || DEFAULT_RATES);
+      state.rates.RUB = 1;
+      saveJSON("abuev_rates", state.rates);
+      renderRates();
+      renderList(false);
+      toast(t("reset_rates"));
+    });
+  }
+
+  $$(".nav-item").forEach(function (item) {
+    item.addEventListener("click", function () {
+      haptic();
+      switchScreen(item.getAttribute("data-screen"), item);
+    });
+  });
+
+  $$("#viewSeg .seg-btn").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      haptic();
+      setView(btn.getAttribute("data-view"));
+    });
+  });
+
+  var swapBtn = $("#swapBtn");
+  if (swapBtn) {
+    swapBtn.addEventListener("click", function () {
+      haptic();
+      if (state.base === "RUB") {
+        setBase(state.prevBase || "USD");
+      } else {
+        state.prevBase = state.base;
+        setBase("RUB");
+      }
+    });
+  }
+
+  /* график */
+  $$("#periodSeg .seg-btn").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      haptic();
+      changePeriod(Number(btn.getAttribute("data-days")));
+    });
+  });
+
+  var modal = $("#chartModal");
+  if (modal) {
+    modal.addEventListener("click", function (event) {
+      if (event.target === modal || event.target.getAttribute("data-close")) closeChart();
+    });
+  }
+  var closeBtn = $("#closeChart");
+  if (closeBtn) closeBtn.addEventListener("click", closeChart);
+
+  var canvas = $("#chartCanvas");
+  if (canvas) {
+    canvas.addEventListener("pointermove", handleChartPointer);
+    canvas.addEventListener("pointerleave", hideChartTip);
+    canvas.addEventListener("pointercancel", hideChartTip);
+  }
+
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape" && state.chart) closeChart();
+  });
+
+  window.addEventListener("resize", debounce(function () {
+    if (state.chart) drawChart(state.chart.activeIndex);
+  }, 150));
+
+  /* установка приложения */
+  window.addEventListener("beforeinstallprompt", function (event) {
+    event.preventDefault();
+    state.installPrompt = event;
+    var btn = $("#installBtn");
+    if (btn) btn.hidden = false;
+  });
+
+  var installBtn = $("#installBtn");
+  if (installBtn) {
+    installBtn.addEventListener("click", function () {
+      if (!state.installPrompt) return toast(t("install"));
+      state.installPrompt.prompt();
+      state.installPrompt.userChoice.then(function () {
+        state.installPrompt = null;
+        installBtn.hidden = true;
+      });
+    });
+  }
+
+  window.addEventListener("appinstalled", function () {
+    var btn = $("#installBtn");
+    if (btn) btn.hidden = true;
+  });
+
+  /* тень у шапки при прокрутке */
+  window.addEventListener("scroll", function () {
+    var topbar = $(".topbar");
+    if (topbar) topbar.classList.toggle("is-scrolled", window.scrollY > 4);
+  }, { passive: true });
+
+  if (window.matchMedia) {
+    var media = window.matchMedia("(prefers-color-scheme: dark)");
+    var onChange = function () {
+      if (state.theme === "auto") {
+        updateThemeMeta();
+        if (state.chart) drawChart(state.chart.activeIndex);
+      }
+    };
+    if (media.addEventListener) media.addEventListener("change", onChange);
+    else if (media.addListener) media.addListener(onChange);
+  }
+}
+
+/* ================= старт ================= */
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", init);
+} else {
+  init();
+}
