@@ -1,8 +1,8 @@
 /* Abuev — service worker.
-   ВАЖНО: после каждого обновления файлов меняйте VERSION (например, v2, v3),
+   ВАЖНО: после каждого обновления файлов меняйте VERSION (например, v3, v4),
    иначе браузер может показывать старую версию из кэша. */
 
-const VERSION = "abuev-v1";
+const VERSION = "abuev-v2";
 const ASSETS = [
   "./",
   "./index.html",
