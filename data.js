@@ -69,3 +69,15 @@ var DEFAULT_RATES = {
   TON: 620, DOGE: 5.6, ADA: 20, TRX: 25, AVAX: 1400, SHIB: 0.0005, DOT: 90,
   LTC: 6100, BCH: 19000, LINK: 1200, POL: 7, XLM: 9, ATOM: 170, UNI: 700
 };
+
+/* ID монет для CoinGecko (живые цены). Если ID неверный — монета просто
+   останется на дневных данных, это безопасно. */
+var COINGECKO_IDS = {
+  BTC: "bitcoin", ETH: "ethereum", USDT: "tether", BNB: "binancecoin", SOL: "solana",
+  XRP: "ripple", TON: "the-open-network", DOGE: "dogecoin", ADA: "cardano", TRX: "tron",
+  AVAX: "avalanche-2", SHIB: "shiba-inu", DOT: "polkadot", LTC: "litecoin", BCH: "bitcoin-cash",
+  LINK: "chainlink", POL: "polygon-ecosystem-token", XLM: "stellar", ATOM: "cosmos", UNI: "uniswap"
+};
+
+/* Быстрые суммы под полем ввода (в базовой валюте). */
+var QUICK_AMOUNTS = [100, 500, 1000, 5000];

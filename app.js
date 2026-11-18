@@ -1,4 +1,4 @@
-/* Abuev — основная логика: состояние, рендер, курсы, график. */
+/* Abuev — основная логика: состояние, рендер, курсы (фиат + крипта), график. */
 
 var state = {
   lang: "ru",
@@ -6,15 +6,20 @@ var state = {
   base: "USD",
   prevBase: "USD",
   view: "fiat",
-  rates: {},
-  apiRates: {},
-  updatedAt: 0,
+  rates: {},          // ₽ за 1 единицу (валюты и крипта)
+  apiRates: {},       // снапшот дневных курсов для «Сбросить»
+  crypto: { at: 0, prices: {} }, // живые цены крипты (₽ за 1 монету)
+  ratesDate: "",      // дата данных из API (YYYY-MM-DD)
+  updatedAt: 0,       // когда скачали
   favorites: [],
   query: "",
   ratesQuery: "",
+  amounts: { fiat: "1", crypto: "1" },
   tabsOpen: false,
   screen: "converter",
   loading: false,
+  loadingCrypto: false,
+  cryptoTimer: null,
   chart: null,
   installPrompt: null
 };
@@ -24,6 +29,7 @@ var RATES_URLS = [
   "https://latest.currency-api.pages.dev/v1/currencies/usd.min.json"
 ];
 var HISTORY_CACHE_MS = 6 * 60 * 60 * 1000;
+var CRYPTO_TTL_MS = 60 * 1000;
 
 /* ================= инициализация ================= */
 
@@ -32,15 +38,16 @@ function init() {
   applyTheme(state.theme);
   applyLang(state.lang, true);
   bindEvents();
+  renderAmountInput();
+  renderQuick();
   renderTabs();
   renderList();
   renderRates();
-  updateStatus(state.updatedAt
-    ? t("updated_at") + " · " + formatTime(state.updatedAt, state.lang)
-    : t("status_loading"));
+  updateStatus(buildStatusText());
   registerServiceWorker();
   watchConnection();
-  syncRates({ silent: true });
+  setupInstall();
+  syncAll({ silent: true });
 }
 
 function restoreState() {
@@ -65,6 +72,17 @@ function restoreState() {
   }
   state.apiRates = Object.assign({}, state.rates);
   state.updatedAt = loadJSON("abuev_rates_at", 0) || 0;
+  state.ratesDate = loadJSON("abuev_rates_date", "") || "";
+
+  var crypto = loadJSON("abuev_crypto", null);
+  if (crypto && crypto.prices && typeof crypto.at === "number") {
+    state.crypto = crypto;
+  }
+
+  var amounts = loadJSON("abuev_amounts", null);
+  if (amounts && typeof amounts.fiat === "string" && typeof amounts.crypto === "string") {
+    state.amounts = amounts;
+  }
 
   var favs = loadJSON("abuev_favorites", []);
   if (Array.isArray(favs)) {
@@ -100,7 +118,7 @@ function cycleTheme() {
   applyTheme(next);
   haptic();
   toast(t("theme") + ": " + t("theme_" + next));
-  if (state.chart) drawChart(state.chart.activeIndex);
+  if (state.chart) drawChart(state.chart.activeIndex, 1);
 }
 
 /* ================= язык ================= */
@@ -124,24 +142,17 @@ function applyLang(lang, firstRun) {
   if (amt) amt.setAttribute("aria-label", t("amount"));
 
   applyAriaLabels();
+  renderQuick();
   renderTabs();
-  renderList();
+  renderList(false);
   renderRates();
   renderSegThumbs();
-
-  if (!firstRun) {
-    var st = $("#status");
-    if (st) {
-      st.textContent = state.updatedAt
-        ? t("updated_at") + " · " + formatTime(state.updatedAt, state.lang)
-        : t("status_error");
-    }
-  }
+  updateStatus(buildStatusText());
 
   if (state.chart) {
     updateChartHeader();
     renderChartStats(state.chart.series || []);
-    drawChart(state.chart.activeIndex);
+    drawChart(state.chart.activeIndex, 1);
   }
 }
 
@@ -165,6 +176,7 @@ function applyAriaLabels() {
     ["#themeBtn", "theme"],
     ["#installBtn", "install"],
     ["#closeChart", "close"],
+    ["#closeIos", "close"],
     ["#searchInput", "search_ph"],
     ["#ratesSearch", "rates_search_ph"],
     ["#swapBtn", "base_label"]
@@ -179,6 +191,10 @@ function applyAriaLabels() {
 
 function activeList() {
   return state.view === "crypto" ? CRYPTO : FIAT;
+}
+
+function isCrypto(code) {
+  return CRYPTO.some(function (x) { return x.c === code; });
 }
 
 function renderTabs() {
@@ -209,7 +225,56 @@ function setBase(code) {
   state.base = code;
   saveJSON("abuev_base", code);
   renderTabs();
-  renderList();
+  renderList(false);
+}
+
+/* ================= сумма и быстрые значения ================= */
+
+function currentAmount() {
+  return state.amounts[state.view] || "1";
+}
+
+function renderAmountInput() {
+  var amt = $("#amt");
+  if (amt) amt.value = currentAmount();
+}
+
+function saveAmountValue() {
+  var amt = $("#amt");
+  if (amt) state.amounts[state.view] = amt.value;
+  saveJSON("abuev_amounts", state.amounts);
+}
+
+function renderQuick() {
+  var row = $("#quickRow");
+  if (!row) return;
+  row.textContent = "";
+
+  /* Быстрые суммы — только для фиатного режима */
+  if (state.view !== "fiat") {
+    row.classList.add("hidden");
+    return;
+  }
+  row.classList.remove("hidden");
+
+  var current = parseAmount(currentAmount());
+  QUICK_AMOUNTS.forEach(function (n) {
+    var chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "chip" + (Math.abs(current - n) < 1e-9 ? " on" : "");
+    chip.textContent = formatNumber(n, state.lang, 0, 0);
+    chip.setAttribute("aria-label", n);
+    chip.addEventListener("click", function () {
+      haptic();
+      state.amounts[state.view] = String(n);
+      saveJSON("abuev_amounts", state.amounts);
+      var amt = $("#amt");
+      if (amt) amt.value = String(n);
+      renderQuick();
+      renderList(true);
+    });
+    row.appendChild(chip);
+  });
 }
 
 /* ================= список конвертации ================= */
@@ -243,12 +308,13 @@ function renderList(animate) {
   listEl.textContent = "";
   if (emptyEl) emptyEl.hidden = items.length > 0;
 
-  var amount = parseAmount($("#amt") ? $("#amt").value : 0);
-  var calc = amount > 0 ? amount : 1;
+  var amount = parseAmount(currentAmount());
   var fragment = document.createDocumentFragment();
 
   items.forEach(function (item) {
-    fragment.appendChild(buildRow(item, calc, amount, animate !== false));
+    fragment.appendChild(state.view === "crypto"
+      ? buildCryptoRow(item, amount, animate !== false)
+      : buildFiatRow(item, amount, animate !== false));
   });
 
   listEl.appendChild(fragment);
@@ -256,19 +322,8 @@ function renderList(animate) {
   renderSegThumbs();
 }
 
-function buildRow(item, calcAmount, realAmount, animate) {
-  var isBase = item.c === state.base;
-  var value = isBase ? calcAmount : convert(calcAmount, state.base, item.c);
-  var one = convert(1, state.base, item.c);
-  var rubValue = convert(value, item.c, "RUB");
+function buildStar(item) {
   var fav = state.favorites.indexOf(item.c) > -1;
-
-  var row = document.createElement("article");
-  row.className = "row" + (isBase ? " src" : "");
-  row.setAttribute("role", "listitem");
-  row.setAttribute("data-code", item.c);
-
-  /* звезда */
   var star = document.createElement("button");
   star.type = "button";
   star.className = "star" + (fav ? " on" : "");
@@ -279,11 +334,27 @@ function buildRow(item, calcAmount, realAmount, animate) {
     event.stopPropagation();
     toggleFavorite(item.c);
   });
+  return star;
+}
 
-  /* название */
+function buildShare(item, textFn) {
+  var share = document.createElement("button");
+  share.type = "button";
+  share.className = "row-share";
+  share.setAttribute("aria-label", t("share"));
+  share.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="m8.3 10.7 7.4-4.3M8.3 13.3l7.4 4.3"/></svg>';
+  share.addEventListener("click", function (event) {
+    event.stopPropagation();
+    haptic();
+    shareResult(typeof textFn === "function" ? textFn() : "Abuev");
+  });
+  return share;
+}
+
+function buildName(item, clickable) {
   var main = document.createElement("div");
   main.className = "row-main";
-  if (!isBase) {
+  if (clickable) {
     main.addEventListener("click", function () { openChart(item.c); });
     main.setAttribute("role", "button");
     main.setAttribute("tabindex", "0");
@@ -291,15 +362,13 @@ function buildRow(item, calcAmount, realAmount, animate) {
       if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openChart(item.c); }
     });
   }
-
   var code = document.createElement("div");
   code.className = "row-code";
   code.appendChild(document.createTextNode(item.c));
-  if (!isBase) {
+  if (clickable) {
     code.insertAdjacentHTML("beforeend",
       '<svg class="row-chart" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 16.5 9 10l5 4 7-8"/><path d="M15 6h6v6"/></svg>');
   }
-
   var sym = document.createElement("span");
   sym.className = "row-sym";
   sym.textContent = item.s;
@@ -311,8 +380,23 @@ function buildRow(item, calcAmount, realAmount, animate) {
 
   main.appendChild(code);
   main.appendChild(name);
+  return main;
+}
 
-  /* значение */
+/* фиатная строка: сумма в базовой валюте → выбранная валюта */
+function buildFiatRow(item, amount, animate) {
+  var isBase = item.c === state.base;
+  var value = isBase ? (amount > 0 ? amount : 1) : convert(amount > 0 ? amount : 1, state.base, item.c);
+  var one = convert(1, state.base, item.c);
+
+  var row = document.createElement("article");
+  row.className = "row" + (isBase ? " src" : "");
+  row.setAttribute("role", "listitem");
+  row.setAttribute("data-code", item.c);
+
+  row.appendChild(buildStar(item));
+  row.appendChild(buildName(item, !isBase));
+
   var valueBox = document.createElement("div");
   valueBox.className = "row-value";
   valueBox.setAttribute("role", "button");
@@ -320,11 +404,9 @@ function buildRow(item, calcAmount, realAmount, animate) {
 
   var valueLine = document.createElement("div");
   valueLine.className = "value";
-
   var num = document.createElement("span");
   num.className = "num";
   valueLine.appendChild(num);
-
   var unit = document.createElement("small");
   unit.textContent = item.s;
   valueLine.appendChild(unit);
@@ -332,9 +414,7 @@ function buildRow(item, calcAmount, realAmount, animate) {
   var per = document.createElement("div");
   per.className = "per";
   if (isBase) {
-    per.textContent = "≈ " + formatShort(convert(calcAmount, item.c, "RUB"), state.lang) + " ₽";
-  } else if (state.view === "crypto" && item.c !== "RUB") {
-    per.textContent = "≈ " + formatShort(rubValue, state.lang) + " ₽";
+    per.textContent = "≈ " + formatShort(convert(value, item.c, "RUB"), state.lang) + " ₽";
   } else {
     per.textContent = "1 " + state.base + " = " + formatShort(one, state.lang) + " " + item.c;
   }
@@ -343,35 +423,83 @@ function buildRow(item, calcAmount, realAmount, animate) {
   valueBox.appendChild(per);
 
   function copyValue() {
-    var text = formatMoney(value, state.lang) + " " + item.c;
-    copyText(text).then(function (ok) { toast(ok ? t("toast_copied") : t("toast_copy_error")); });
+    copyText(formatMoney(value, state.lang) + " " + item.c)
+      .then(function (ok) { toast(ok ? t("toast_copied") : t("toast_copy_error")); });
   }
   valueBox.addEventListener("click", copyValue);
   valueBox.addEventListener("keydown", function (event) {
     if (event.key === "Enter" || event.key === " ") { event.preventDefault(); copyValue(); }
   });
 
-  /* поделиться */
-  var share = document.createElement("button");
-  share.type = "button";
-  share.className = "row-share";
-  share.setAttribute("aria-label", t("share"));
-  share.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="m8.3 10.7 7.4-4.3M8.3 13.3l7.4 4.3"/></svg>';
-  share.addEventListener("click", function (event) {
-    event.stopPropagation();
-    haptic();
-    var total = isBase ? calcAmount : value;
-    var text = formatMoney(isBase ? realAmount || calcAmount : total, state.lang) + " " + state.base +
-      " = " + formatMoney(total, state.lang) + " " + item.c;
-    shareResult(text);
-  });
+  function buildShareText() {
+    return formatMoney(amount > 0 ? amount : 1, state.lang) + " " + state.base +
+      " = " + formatMoney(value, state.lang) + " " + item.c;
+  }
 
-  row.appendChild(star);
-  row.appendChild(main);
   row.appendChild(valueBox);
-  row.appendChild(share);
+  row.appendChild(buildShare(item, buildShareText));
 
   countUpIfNeeded(num, value, state.lang, animate);
+  return row;
+}
+
+/* крипто-строка: цена 1 монеты в рублях + пересчёт суммы */
+function buildCryptoRow(item, amount, animate) {
+  var rubPrice = state.rates[item.c] || 0;
+  var priceInBase = state.rates[state.base] > 0 ? rubPrice / state.rates[state.base] : 0;
+
+  var row = document.createElement("article");
+  row.className = "row crypto";
+  row.setAttribute("role", "listitem");
+  row.setAttribute("data-code", item.c);
+
+  row.appendChild(buildStar(item));
+  row.appendChild(buildName(item, true));
+
+  var valueBox = document.createElement("div");
+  valueBox.className = "row-value";
+  valueBox.setAttribute("role", "button");
+  valueBox.setAttribute("tabindex", "0");
+
+  var valueLine = document.createElement("div");
+  valueLine.className = "value";
+  var num = document.createElement("span");
+  num.className = "num";
+  valueLine.appendChild(num);
+  var unit = document.createElement("small");
+  unit.textContent = "₽";
+  valueLine.appendChild(unit);
+
+  var per = document.createElement("div");
+  per.className = "per";
+  if (amount > 0 && amount !== 1) {
+    var conv = convert(amount, state.base, item.c);
+    per.textContent = formatMoney(amount, state.lang) + " " + state.base + " = " +
+      formatNumber(conv, state.lang, 0, 8) + " " + item.c;
+  } else {
+    per.textContent = "1 " + item.c + " = " + formatMoney(priceInBase, state.lang) + " " + state.base;
+  }
+
+  valueBox.appendChild(valueLine);
+  valueBox.appendChild(per);
+
+  function copyValue() {
+    copyText("1 " + item.c + " = " + formatMoney(rubPrice, state.lang) + " ₽")
+      .then(function (ok) { toast(ok ? t("toast_copied") : t("toast_copy_error")); });
+  }
+  valueBox.addEventListener("click", copyValue);
+  valueBox.addEventListener("keydown", function (event) {
+    if (event.key === "Enter" || event.key === " ") { event.preventDefault(); copyValue(); }
+  });
+
+  function buildShareText() {
+    return "1 " + item.c + " = " + formatMoney(rubPrice, state.lang) + " ₽";
+  }
+
+  row.appendChild(valueBox);
+  row.appendChild(buildShare(item, buildShareText));
+
+  countUpIfNeeded(num, rubPrice, state.lang, animate);
   return row;
 }
 
@@ -393,6 +521,15 @@ function toggleFavorite(code) {
 
 /* ================= экран курсов ================= */
 
+function isEdited(code) {
+  if (isCrypto(code)) return false;
+  var api = state.apiRates[code];
+  if (!api || !(api > 0)) return false;
+  var cur = state.rates[code];
+  if (!cur || !(cur > 0)) return false;
+  return Math.abs(cur / api - 1) > 0.004;
+}
+
 function renderRates() {
   var wrap = $("#ratesList");
   if (!wrap) return;
@@ -410,12 +547,25 @@ function renderRates() {
 
   items.forEach(function (item) {
     var row = document.createElement("div");
-    row.className = "rate-row";
+    row.className = "rate-row" +
+      (isEdited(item.c) ? " edited" : "") +
+      (isCrypto(item.c) && cryptoIsLive() ? " live" : "");
 
     var label = document.createElement("div");
     var code = document.createElement("span");
     code.className = "rate-code";
     code.textContent = item.c;
+    if (isEdited(item.c)) {
+      var tag = document.createElement("span");
+      tag.className = "edited-tag";
+      tag.textContent = t("edited");
+      code.appendChild(tag);
+    } else if (isCrypto(item.c) && cryptoIsLive()) {
+      var live = document.createElement("span");
+      live.className = "rate-live";
+      live.textContent = t("crypto_live");
+      code.appendChild(live);
+    }
     var name = document.createElement("span");
     name.className = "rate-name";
     name.textContent = currencyName(item, state.lang);
@@ -426,6 +576,7 @@ function renderRates() {
     input.className = "rate-input";
     input.type = "text";
     input.inputMode = "decimal";
+    input.autocomplete = "off";
     input.value = formatNumber(state.rates[item.c] || 0, state.lang, 2, 4);
     input.setAttribute("aria-label", item.c + " — " + currencyName(item, state.lang) + " / RUB");
     input.addEventListener("input", function () {
@@ -433,18 +584,41 @@ function renderRates() {
       if (parsed > 0) {
         state.rates[item.c] = parsed;
         saveJSON("abuev_rates", state.rates);
-        saveJSON("abuev_rates_at", state.updatedAt);
         renderList(false);
       }
     });
     input.addEventListener("blur", function () {
       input.value = formatNumber(state.rates[item.c] || 0, state.lang, 2, 4);
+      renderRates();
+    });
+
+    var reset = document.createElement("button");
+    reset.type = "button";
+    reset.className = "rate-reset";
+    reset.setAttribute("aria-label", t("reset_one"));
+    reset.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>';
+    reset.addEventListener("click", function () {
+      resetCurrency(item.c);
     });
 
     row.appendChild(label);
+    row.appendChild(reset);
     row.appendChild(input);
     wrap.appendChild(row);
   });
+}
+
+function resetCurrency(code) {
+  var target = state.apiRates[code];
+  if (!target || !(target > 0)) target = DEFAULT_RATES[code];
+  if (target > 0) {
+    state.rates[code] = target;
+    saveJSON("abuev_rates", state.rates);
+    haptic();
+    renderRates();
+    renderList(false);
+    toast(t("reset_one") + " · " + code);
+  }
 }
 
 /* ================= загрузка курсов ================= */
@@ -476,9 +650,14 @@ async function fetchRates() {
   var usd = data && data.usd;
   if (!usd || !(usd.rub > 0)) throw new Error("bad payload");
 
-  var next = {};
-  FIAT.concat(CRYPTO).forEach(function (item) {
-    if (item.c === "RUB") { next.RUB = 1; return; }
+  var next = { RUB: 1 };
+  FIAT.forEach(function (item) {
+    if (item.c === "RUB") return;
+    var rate = usd[item.c.toLowerCase()];
+    if (rate > 0) next[item.c] = usd.rub / rate;
+  });
+  /* крипту тоже берём как запасной вариант (если CoinGecko недоступен) */
+  CRYPTO.forEach(function (item) {
     var rate = usd[item.c.toLowerCase()];
     if (rate > 0) next[item.c] = usd.rub / rate;
   });
@@ -490,29 +669,90 @@ async function fetchRates() {
   });
   state.apiRates = Object.assign({}, state.rates);
   state.updatedAt = Date.now();
+  if (data.date) state.ratesDate = String(data.date);
   saveJSON("abuev_rates", state.rates);
   saveJSON("abuev_rates_at", state.updatedAt);
+  saveJSON("abuev_rates_date", state.ratesDate);
 }
 
-async function syncRates(options) {
+/* CoinGecko — лучшие усилия: при недоступности остаются дневные данные. */
+async function fetchCryptoPrices() {
+  var ids = CRYPTO.map(function (item) { return COINGECKO_IDS[item.c]; }).filter(Boolean).join(",");
+  if (!ids) return;
+  var url = "https://api.coingecko.com/api/v3/simple/price?ids=" + encodeURIComponent(ids) + "&vs_currencies=rub";
+  var data = await fetchJSON([url], 7000);
+  if (!data || typeof data !== "object") return;
+
+  var prices = {};
+  CRYPTO.forEach(function (item) {
+    var id = COINGECKO_IDS[item.c];
+    if (id && data[id] && data[id].rub > 0) prices[item.c] = data[id].rub;
+  });
+
+  if (Object.keys(prices).length >= 3) {
+    state.crypto = { at: Date.now(), prices: prices };
+    saveJSON("abuev_crypto", state.crypto);
+    Object.keys(prices).forEach(function (code) {
+      state.rates[code] = prices[code];
+    });
+    saveJSON("abuev_rates", state.rates);
+  }
+}
+
+function cryptoIsLive() {
+  return state.crypto && state.crypto.at && (Date.now() - state.crypto.at) < CRYPTO_TTL_MS * 2;
+}
+
+async function syncAll(options) {
   var opts = options || {};
-  if (state.loading) return;
-  state.loading = true;
   setButtonState(true);
   updateStatus(t("status_loading"));
 
+  var jobs = [fetchRates()];
+  jobs.push(fetchCryptoPrices().catch(function () {}));
+
   try {
-    await fetchRates();
+    await Promise.all(jobs);
     renderRates();
     renderList(false);
-    updateStatus(t("status_updated") + " · " + formatTime(state.updatedAt, state.lang));
+    updateStatus(buildStatusText());
     if (!opts.silent) toast(t("status_updated"));
   } catch (error) {
     updateStatus(t("status_error"));
   } finally {
-    state.loading = false;
     setButtonState(false);
   }
+}
+
+function syncRates() {
+  return syncAll({});
+}
+
+function startCryptoTimer() {
+  stopCryptoTimer();
+  state.cryptoTimer = setInterval(function () {
+    if (!document.hidden) {
+      fetchCryptoPrices().then(function () {
+        if (state.view === "crypto") {
+          renderList(false);
+          updateCryptoHint();
+        }
+        if (state.screen === "rates") renderRates();
+      }).catch(function () {});
+    }
+  }, CRYPTO_TTL_MS);
+}
+
+function stopCryptoTimer() {
+  if (state.cryptoTimer) clearInterval(state.cryptoTimer);
+  state.cryptoTimer = null;
+}
+
+function updateCryptoHint() {
+  var hint = $("#cryptoHint");
+  if (!hint) return;
+  hint.hidden = state.view !== "crypto";
+  hint.classList.toggle("live", cryptoIsLive());
 }
 
 function setButtonState(loading) {
@@ -522,6 +762,14 @@ function setButtonState(loading) {
   if (btn) btn.disabled = loading;
   if (spinner) spinner.hidden = !loading;
   if (text) text.textContent = loading ? t("btn_loading") : t("btn_update");
+}
+
+function buildStatusText() {
+  if (!state.updatedAt) return t("status_loading");
+  var datePart = state.ratesDate
+    ? t("data_date").replace("{date}", formatDateISO(state.ratesDate, state.lang))
+    : t("updated_at") + " · " + formatTime(state.updatedAt, state.lang);
+  return datePart;
 }
 
 function updateStatus(text) {
@@ -627,7 +875,7 @@ async function openChart(code) {
     }
     hideChartState();
     renderChartStats(series);
-    drawChart(-1);
+    animateChart();
   } catch (error) {
     showChartState(t("chart_error"));
   }
@@ -714,11 +962,13 @@ function cssVar(name) {
   return getComputedStyle(document.body).getPropertyValue(name).trim() || "#3b5bdb";
 }
 
-function drawChart(activeIndex) {
+/* progress: 0..1 — доля отрисованной линии (для плавного появления). */
+function drawChart(activeIndex, progress) {
   var canvas = $("#chartCanvas");
   var box = $("#chartBox");
   var chart = state.chart;
   if (!canvas || !box || !chart || !chart.series || chart.series.length < 2) return;
+  if (progress === undefined) progress = 1;
 
   var series = chart.series;
   var rect = box.getBoundingClientRect();
@@ -775,27 +1025,35 @@ function drawChart(activeIndex) {
   }
   ctx.setLineDash([]);
 
-  /* заливка */
+  /* количество точек, которые уже видны */
+  var shownCount = Math.max(2, Math.round((series.length - 1) * progress + 1));
+  var clipX = x(shownCount - 1) + (x(shownCount) !== undefined ? (x(shownCount) - x(shownCount - 1)) * 0.5 : 0);
+
+  /* заливка и линия — с обрезкой по прогрессу */
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(pad.left, 0, Math.max(0, clipX - pad.left), height);
+  ctx.clip();
+
   var gradient = ctx.createLinearGradient(0, pad.top, 0, height - pad.bottom);
   gradient.addColorStop(0, hexToRgba(accent, 0.30));
   gradient.addColorStop(1, hexToRgba(accent, 0));
   ctx.beginPath();
   ctx.moveTo(x(0), y(values[0]));
-  for (var i = 1; i < series.length; i++) {
+  for (var i = 1; i < shownCount; i++) {
     var prevX = x(i - 1), curX = x(i);
     var midX = (prevX + curX) / 2;
     ctx.bezierCurveTo(midX, y(values[i - 1]), midX, y(values[i]), curX, y(values[i]));
   }
-  ctx.lineTo(x(series.length - 1), height - pad.bottom);
+  ctx.lineTo(x(shownCount - 1), height - pad.bottom);
   ctx.lineTo(x(0), height - pad.bottom);
   ctx.closePath();
   ctx.fillStyle = gradient;
   ctx.fill();
 
-  /* линия */
   ctx.beginPath();
   ctx.moveTo(x(0), y(values[0]));
-  for (var j = 1; j < series.length; j++) {
+  for (var j = 1; j < shownCount; j++) {
     var px = x(j - 1), cx = x(j);
     var mx = (px + cx) / 2;
     ctx.bezierCurveTo(mx, y(values[j - 1]), mx, y(values[j]), cx, y(values[j]));
@@ -805,16 +1063,19 @@ function drawChart(activeIndex) {
   ctx.lineJoin = "round";
   ctx.lineCap = "round";
   ctx.stroke();
+  ctx.restore();
 
-  /* точки */
-  ctx.fillStyle = card;
-  ctx.strokeStyle = accent;
-  ctx.lineWidth = 2;
-  for (var d = 0; d < series.length; d++) {
-    ctx.beginPath();
-    ctx.arc(x(d), y(values[d]), d === activeIndex ? 5 : 3, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
+  /* точки (появляются только когда почти всё отрисовано) */
+  if (progress >= 0.98) {
+    ctx.fillStyle = card;
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = 2;
+    for (var d = 0; d < series.length; d++) {
+      ctx.beginPath();
+      ctx.arc(x(d), y(values[d]), d === activeIndex ? 5 : 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    }
   }
 
   /* подписи дат */
@@ -843,6 +1104,27 @@ function drawChart(activeIndex) {
   }
 }
 
+function animateChart() {
+  var chart = state.chart;
+  if (!chart || !chart.series || chart.series.length < 2) return;
+  if (prefersReducedMotion) { drawChart(-1, 1); return; }
+
+  var start = null;
+  var duration = 560;
+  var token = (chart.animToken || 0) + 1;
+  chart.animToken = token;
+
+  function frame(ts) {
+    if (!state.chart || state.chart !== chart || chart.animToken !== token) return;
+    if (start === null) start = ts;
+    var p = Math.min((ts - start) / duration, 1);
+    var eased = 1 - Math.pow(1 - p, 3);
+    drawChart(-1, eased);
+    if (p < 1) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+
 function handleChartPointer(event) {
   var chart = state.chart;
   var box = $("#chartBox");
@@ -865,13 +1147,13 @@ function handleChartPointer(event) {
   tip.style.top = point.y + "px";
   tip.hidden = false;
 
-  if (chart.activeIndex !== nearest) drawChart(nearest);
+  if (chart.activeIndex !== nearest) drawChart(nearest, 1);
 }
 
 function hideChartTip() {
   var tip = $("#chartTip");
   if (tip) tip.hidden = true;
-  if (state.chart) drawChart(-1);
+  if (state.chart) drawChart(-1, 1);
 }
 
 function setPeriodButtons(days) {
@@ -898,7 +1180,7 @@ async function changePeriod(days) {
     if (!series.length) { showChartState(t("chart_error")); return; }
     hideChartState();
     renderChartStats(series);
-    drawChart(-1);
+    animateChart();
   } catch (error) {
     showChartState(t("chart_error"));
   }
@@ -919,6 +1201,7 @@ function switchScreen(name, button) {
 }
 
 function setView(view) {
+  if (state.view === view) return;
   state.view = view;
   $$("#viewSeg .seg-btn").forEach(function (btn) {
     var on = btn.getAttribute("data-view") === view;
@@ -926,7 +1209,12 @@ function setView(view) {
     btn.setAttribute("aria-selected", on ? "true" : "false");
   });
   moveThumb("#viewSeg", "#segThumb");
-  renderList();
+  renderAmountInput();
+  renderQuick();
+  updateCryptoHint();
+  renderList(true);
+  if (view === "crypto") startCryptoTimer();
+  else stopCryptoTimer();
 }
 
 function moveThumb(segSelector, thumbSelector) {
@@ -948,6 +1236,47 @@ function renderSegThumbs() {
   if (first) moveNavPill(first);
 }
 
+/* ================= установка / iOS ================= */
+
+function isIOS() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+}
+
+function isStandalone() {
+  return window.navigator.standalone === true ||
+    (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches);
+}
+
+function setupInstall() {
+  var btn = $("#installBtn");
+  if (!btn) return;
+  /* на iOS показываем кнопку сразу (инструкция вместо install prompt) */
+  if (isIOS() && !isStandalone()) {
+    btn.hidden = false;
+    return;
+  }
+  btn.hidden = true;
+}
+
+function openIosHint() {
+  var modal = $("#iosModal");
+  if (!modal) return;
+  modal.classList.add("open");
+  modal.setAttribute("aria-hidden", "false");
+  document.body.style.overflow = "hidden";
+  var got = $("#iosGotIt");
+  if (got) got.focus({ preventScroll: true });
+}
+
+function closeIosHint() {
+  var modal = $("#iosModal");
+  if (!modal) return;
+  modal.classList.remove("open");
+  modal.setAttribute("aria-hidden", "true");
+  document.body.style.overflow = "";
+}
+
 /* ================= подключение / SW ================= */
 
 function watchConnection() {
@@ -958,7 +1287,7 @@ function watchConnection() {
   }
   window.addEventListener("online", function () {
     update();
-    syncRates({ silent: true });
+    syncAll({ silent: true });
   });
   window.addEventListener("offline", update);
   update();
@@ -977,6 +1306,8 @@ function bindEvents() {
   var amt = $("#amt");
   if (amt) {
     amt.addEventListener("input", function () {
+      saveAmountValue();
+      renderQuick();
       renderList(false);
     });
     amt.addEventListener("focus", function () { amt.select(); });
@@ -1021,16 +1352,28 @@ function bindEvents() {
   }
 
   var ratesSearch = $("#ratesSearch");
+  var clearRatesSearch = $("#clearRatesSearch");
   if (ratesSearch) {
     ratesSearch.addEventListener("input", function () {
       state.ratesQuery = ratesSearch.value;
+      if (clearRatesSearch) clearRatesSearch.hidden = !ratesSearch.value;
       renderRates();
+    });
+  }
+  if (clearRatesSearch) {
+    clearRatesSearch.addEventListener("click", function () {
+      if (!ratesSearch) return;
+      ratesSearch.value = "";
+      state.ratesQuery = "";
+      clearRatesSearch.hidden = true;
+      renderRates();
+      ratesSearch.focus();
     });
   }
 
   var updateBtn = $("#updateBtn");
   if (updateBtn) {
-    updateBtn.addEventListener("click", function () { haptic(); syncRates(); });
+    updateBtn.addEventListener("click", function () { haptic(); syncAll({}); });
   }
 
   var resetBtn = $("#resetRates");
@@ -1097,25 +1440,26 @@ function bindEvents() {
     canvas.addEventListener("pointercancel", hideChartTip);
   }
 
-  document.addEventListener("keydown", function (event) {
-    if (event.key === "Escape" && state.chart) closeChart();
-  });
-
-  window.addEventListener("resize", debounce(function () {
-    if (state.chart) drawChart(state.chart.activeIndex);
-  }, 150));
-
-  /* установка приложения */
-  window.addEventListener("beforeinstallprompt", function (event) {
-    event.preventDefault();
-    state.installPrompt = event;
-    var btn = $("#installBtn");
-    if (btn) btn.hidden = false;
-  });
+  /* iOS-инструкция */
+  var iosModal = $("#iosModal");
+  if (iosModal) {
+    iosModal.addEventListener("click", function (event) {
+      if (event.target === iosModal || event.target.getAttribute("data-close")) closeIosHint();
+    });
+  }
+  var closeIos = $("#closeIos");
+  if (closeIos) closeIos.addEventListener("click", closeIosHint);
+  var gotIt = $("#iosGotIt");
+  if (gotIt) gotIt.addEventListener("click", closeIosHint);
 
   var installBtn = $("#installBtn");
   if (installBtn) {
     installBtn.addEventListener("click", function () {
+      haptic();
+      if (isIOS() && !isStandalone()) {
+        openIosHint();
+        return;
+      }
       if (!state.installPrompt) return toast(t("install"));
       state.installPrompt.prompt();
       state.installPrompt.userChoice.then(function () {
@@ -1125,15 +1469,37 @@ function bindEvents() {
     });
   }
 
+  window.addEventListener("beforeinstallprompt", function (event) {
+    event.preventDefault();
+    state.installPrompt = event;
+    if (!isIOS()) {
+      var btn = $("#installBtn");
+      if (btn) btn.hidden = false;
+    }
+  });
+
   window.addEventListener("appinstalled", function () {
     var btn = $("#installBtn");
     if (btn) btn.hidden = true;
   });
 
-  /* тень у шапки при прокрутке */
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape") {
+      if (state.chart) closeChart();
+      if ($("#iosModal") && $("#iosModal").classList.contains("open")) closeIosHint();
+    }
+  });
+
+  window.addEventListener("resize", debounce(function () {
+    if (state.chart) drawChart(state.chart.activeIndex, 1);
+  }, 150));
+
+  /* компактная шапка + тень при прокрутке */
   window.addEventListener("scroll", function () {
     var topbar = $(".topbar");
-    if (topbar) topbar.classList.toggle("is-scrolled", window.scrollY > 4);
+    if (!topbar) return;
+    topbar.classList.toggle("is-scrolled", window.scrollY > 4);
+    topbar.classList.toggle("compact", window.scrollY > 40);
   }, { passive: true });
 
   if (window.matchMedia) {
@@ -1141,7 +1507,7 @@ function bindEvents() {
     var onChange = function () {
       if (state.theme === "auto") {
         updateThemeMeta();
-        if (state.chart) drawChart(state.chart.activeIndex);
+        if (state.chart) drawChart(state.chart.activeIndex, 1);
       }
     };
     if (media.addEventListener) media.addEventListener("change", onChange);

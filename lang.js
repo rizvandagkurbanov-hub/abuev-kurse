@@ -233,3 +233,115 @@ var translations = {
     reset_rates: "تصفير", rates_hint: "اضغط على القيمة لنسخها. النجمة تضيفها للمفضلة."
   }
 };
+
+/* v3 — дополнительные строки (добавляются к каждому языку сверху). */
+var EXTRA_TRANSLATIONS = {
+  ru: {
+    crypto_hint: "Цены за 1 монету в рублях", crypto_live: "онлайн",
+    data_date: "Данные за {date}", edited: "вручную", reset_one: "Сбросить",
+    install_ios_title: "Установить на iPhone",
+    install_ios_hint: "Safari не показывает кнопку установки. Добавьте приложение вручную — это займёт 10 секунд.",
+    install_step1: "Нажмите «Поделиться» в нижней панели Safari",
+    install_step2: "Пролистайте и выберите «На экран „Домой“»",
+    install_step3: "Нажмите «Добавить» — иконка появится на рабочем столе",
+    got_it: "Понятно"
+  },
+  en: {
+    crypto_hint: "Price per coin, in RUB", crypto_live: "live",
+    data_date: "Data for {date}", edited: "manual", reset_one: "Reset",
+    install_ios_title: "Install on iPhone",
+    install_ios_hint: "Safari doesn't show an install button. Add the app manually — it takes 10 seconds.",
+    install_step1: "Tap the Share button in Safari's bottom bar",
+    install_step2: "Scroll and choose “Add to Home Screen”",
+    install_step3: "Tap “Add” — the icon appears on your Home Screen",
+    got_it: "Got it"
+  },
+  es: {
+    crypto_hint: "Precio por moneda, en RUB", crypto_live: "en vivo",
+    data_date: "Datos del {date}", edited: "manual", reset_one: "Restablecer",
+    install_ios_title: "Instalar en iPhone",
+    install_ios_hint: "Safari no muestra un botón de instalación. Añade la app manualmente — tarda 10 segundos.",
+    install_step1: "Toca «Compartir» en la barra inferior de Safari",
+    install_step2: "Desplázate y elige «Añadir a pantalla de inicio»",
+    install_step3: "Toca «Añadir» — el icono aparecerá en tu pantalla de inicio",
+    got_it: "Entendido"
+  },
+  de: {
+    crypto_hint: "Preis pro Coin, in RUB", crypto_live: "live",
+    data_date: "Daten vom {date}", edited: "manuell", reset_one: "Zurücksetzen",
+    install_ios_title: "Auf dem iPhone installieren",
+    install_ios_hint: "Safari zeigt keinen Installieren-Button. Füge die App manuell hinzu — dauert 10 Sekunden.",
+    install_step1: "Tippe auf „Teilen“ in der Safari-Leiste unten",
+    install_step2: "Scrolle und wähle „Zum Home-Bildschirm“",
+    install_step3: "Tippe auf „Hinzufügen“ — das Symbol erscheint auf dem Home-Bildschirm",
+    got_it: "Verstanden"
+  },
+  fr: {
+    crypto_hint: "Prix par pièce, en RUB", crypto_live: "direct",
+    data_date: "Données du {date}", edited: "manuel", reset_one: "Réinitialiser",
+    install_ios_title: "Installer sur iPhone",
+    install_ios_hint: "Safari n'affiche pas de bouton d'installation. Ajoutez l'app manuellement — 10 secondes.",
+    install_step1: "Touchez « Partager » dans la barre inférieure de Safari",
+    install_step2: "Faites défiler et choisissez « Sur l'écran d'accueil »",
+    install_step3: "Touchez « Ajouter » — l'icône apparaît sur votre écran d'accueil",
+    got_it: "Compris"
+  },
+  zh: {
+    crypto_hint: "每枚价格（卢布）", crypto_live: "实时",
+    data_date: "数据日期 {date}", edited: "手动", reset_one: "重置",
+    install_ios_title: "安装到 iPhone",
+    install_ios_hint: "Safari 不显示安装按钮。请手动添加——只需 10 秒。",
+    install_step1: "点按 Safari 底部栏的「分享」",
+    install_step2: "向下滚动并选择「添加到主屏幕」",
+    install_step3: "点按「添加」——图标会出现在主屏幕上",
+    got_it: "知道了"
+  },
+  ja: {
+    crypto_hint: "1枚あたりの価格（ルーブル）", crypto_live: "ライブ",
+    data_date: "{date} 時点のデータ", edited: "手動", reset_one: "リセット",
+    install_ios_title: "iPhoneにインストール",
+    install_ios_hint: "Safariにはインストールボタンがありません。手動で追加してください（10秒）。",
+    install_step1: "Safari下部の「共有」をタップ",
+    install_step2: "スクロールして「ホーム画面に追加」を選択",
+    install_step3: "「追加」をタップ——アイコンがホーム画面に表示されます",
+    got_it: "OK"
+  },
+  pt: {
+    crypto_hint: "Preço por moeda, em RUB", crypto_live: "ao vivo",
+    data_date: "Dados de {date}", edited: "manual", reset_one: "Redefinir",
+    install_ios_title: "Instalar no iPhone",
+    install_ios_hint: "O Safari não mostra botão de instalação. Adicione o app manualmente — leva 10 segundos.",
+    install_step1: "Toque em «Compartilhar» na barra inferior do Safari",
+    install_step2: "Role e escolha «Adicionar à Tela de Início»",
+    install_step3: "Toque em «Adicionar» — o ícone aparece na Tela de Início",
+    got_it: "Entendi"
+  },
+  hi: {
+    crypto_hint: "प्रति सिक्का मूल्य (रूबल में)", crypto_live: "लाइव",
+    data_date: "{date} का डेटा", edited: "मैनुअल", reset_one: "रीसेट",
+    install_ios_title: "iPhone पर इंस्टॉल करें",
+    install_ios_hint: "Safari में इंस्टॉल बटन नहीं दिखता। ऐप को मैन्युअल जोड़ें — 10 सेकंड लगेंगे।",
+    install_step1: "Safari की निचली पट्टी में «शेयर» पर टैप करें",
+    install_step2: "स्क्रॉल करें और «होम स्क्रीन पर जोड़ें» चुनें",
+    install_step3: "«जोड़ें» पर टैप करें — आइकन होम स्क्रीन पर दिखेगा",
+    got_it: "समझ गया"
+  },
+  ar: {
+    crypto_hint: "سعر العملة الواحدة بالروبل", crypto_live: "مباشر",
+    data_date: "بيانات {date}", edited: "يدوي", reset_one: "إعادة تعيين",
+    install_ios_title: "التثبيت على iPhone",
+    install_ios_hint: "لا يعرض Safari زر تثبيت. أضف التطبيق يدويًا — يستغرق 10 ثوانٍ.",
+    install_step1: "اضغط «مشاركة» في الشريط السفلي من Safari",
+    install_step2: "مرّر واختر «إضافة إلى الشاشة الرئيسية»",
+    install_step3: "اضغط «إضافة» — ستظهر الأيقونة على الشاشة الرئيسية",
+    got_it: "فهمت"
+  }
+};
+
+for (var extraLang in EXTRA_TRANSLATIONS) {
+  if (translations[extraLang]) {
+    for (var extraKey in EXTRA_TRANSLATIONS[extraLang]) {
+      translations[extraLang][extraKey] = EXTRA_TRANSLATIONS[extraLang][extraKey];
+    }
+  }
+}

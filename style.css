@@ -190,7 +190,7 @@ html[data-theme="dark"] #themeBtn .icon-moon { display: block; }
 main { max-width: 640px; margin: 0 auto; padding: 6px 16px calc(var(--nav-h) + 28px + var(--safe-bottom)); }
 
 .screen { display: none; }
-.screen.active { display: block; animation: fadeUp .32s cubic-bezier(.22, .61, .36, 1) both; }
+.screen.active { display: block; animation: fadeUp .4s cubic-bezier(.22, .61, .36, 1) both; }
 @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
 .card {
@@ -302,7 +302,7 @@ main { max-width: 640px; margin: 0 auto; padding: 6px 16px calc(var(--nav-h) + 2
   width: 100%; padding: 11px 38px 11px 38px;
   border: 1px solid var(--line); border-radius: 13px;
   background: var(--card-soft); color: var(--text);
-  font-size: 14px; font-weight: 500;
+  font-size: 16px; font-weight: 500;
   outline: none;
   transition: border-color .2s ease, background .2s ease, box-shadow .2s ease;
 }
@@ -325,7 +325,7 @@ main { max-width: 640px; margin: 0 auto; padding: 6px 16px calc(var(--nav-h) + 2
   align-items: center; gap: 10px;
   padding: 12px 6px;
   border-radius: 12px;
-  animation: rowIn .34s cubic-bezier(.22, .61, .36, 1) both;
+  animation: rowIn .45s cubic-bezier(.22, .61, .36, 1) both;
   transition: background .18s ease;
 }
 .row::after {
@@ -398,7 +398,7 @@ main { max-width: 640px; margin: 0 auto; padding: 6px 16px calc(var(--nav-h) + 2
 
 .rates-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
 .rate-row {
-  display: grid; grid-template-columns: 1fr auto;
+  display: grid; grid-template-columns: 1fr auto auto;
   align-items: center; gap: 10px;
   padding: 8px 10px; border-radius: 13px;
   background: var(--card-soft); border: 1px solid transparent;
@@ -414,7 +414,7 @@ main { max-width: 640px; margin: 0 auto; padding: 6px 16px calc(var(--nav-h) + 2
   width: 118px; padding: 8px 10px; text-align: right;
   border: 1px solid var(--line); border-radius: 10px;
   background: var(--card); color: var(--text);
-  font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums;
+  font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums;
   outline: none;
 }
 .rate-input:focus { border-color: var(--accent); }
@@ -585,3 +585,91 @@ main { max-width: 640px; margin: 0 auto; padding: 6px 16px calc(var(--nav-h) + 2
 /* ---------- прокрутка ---------- */
 .tabs-wrapper.expanded .tabs-inner::-webkit-scrollbar { width: 6px; }
 .tabs-wrapper.expanded .tabs-inner::-webkit-scrollbar-thumb { background: var(--line); border-radius: 6px; }
+
+/* ============================================================
+   v3 — быстрые суммы, крипта, курсы сверху, iPhone, анимации
+   ============================================================ */
+
+/* быстрые суммы */
+.quick-row { display: flex; gap: 7px; margin-top: 10px; }
+.quick-row.hidden { display: none; }
+.chip {
+  flex: 1; padding: 8px 0; border: 1px solid var(--line); border-radius: 11px;
+  background: var(--card-soft); color: var(--muted);
+  font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums;
+  transition: transform .12s ease, background .2s ease, color .2s ease, border-color .2s ease;
+}
+.chip:active { transform: scale(.94); }
+.chip.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+
+/* крипто-подсказка */
+.crypto-hint { display: flex; align-items: center; gap: 8px; margin: -4px 0 12px; font-size: 12px; color: var(--muted); font-weight: 500; }
+.crypto-hint[hidden] { display: none; }
+.live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--line); flex: none; }
+.live-badge { font-size: 10px; font-weight: 800; color: var(--ok); text-transform: uppercase; letter-spacing: .05em; }
+.crypto-hint.live .live-dot { background: var(--ok); animation: pulse-dot 2s infinite; }
+@keyframes pulse-dot {
+  0% { box-shadow: 0 0 0 0 rgba(76, 214, 160, .55); }
+  70% { box-shadow: 0 0 0 7px rgba(76, 214, 160, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(76, 214, 160, 0); }
+}
+
+/* крипто-строка */
+.row.crypto .value { font-size: 17px; }
+
+/* экран курсов — кнопки сверху */
+.rates-actions.top { display: flex; gap: 9px; margin: 0 0 10px; }
+.btn.ghost { background: var(--card); }
+.btn.wide { width: 100%; }
+
+/* ручные правки курса */
+.rate-row .rate-reset {
+  width: 30px; height: 30px; padding: 0; border: 0; border-radius: 9px;
+  background: transparent; color: var(--accent);
+  display: none; place-items: center;
+}
+.rate-row.edited .rate-reset { display: grid; }
+.rate-reset svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.edited-tag {
+  display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 6px;
+  background: var(--accent-soft); color: var(--accent);
+  font-size: 9px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase;
+  vertical-align: 1px;
+}
+.rate-live {
+  display: inline-block; margin-left: 6px;
+  font-size: 9px; font-weight: 800; color: var(--ok);
+  letter-spacing: .04em; text-transform: uppercase; vertical-align: 1px;
+}
+
+/* компактная шапка при прокрутке */
+.topbar { transition: padding .3s ease, box-shadow .3s ease, border-color .25s ease; }
+.topbar .brand-logo, .topbar h1, .topbar .brand-sub {
+  transition: width .28s ease, height .28s ease, font-size .28s ease, opacity .28s ease;
+}
+.topbar.compact { padding-top: calc(8px + var(--safe-top)); padding-bottom: 8px; }
+.topbar.compact .brand-logo { width: 34px; height: 34px; }
+.topbar.compact h1 { font-size: 17px; }
+.topbar.compact .brand-sub { opacity: 0; }
+
+/* iPhone */
+html, body { overscroll-behavior-y: none; }
+body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+input, textarea { -webkit-user-select: text; user-select: text; }
+button, a, .tab, .chip, .nav-item, .row, .rate-row, .seg-btn { touch-action: manipulation; }
+.amount-input { caret-color: var(--accent); }
+.ios-steps { list-style: none; margin: 4px 0 18px; padding: 0; display: flex; flex-direction: column; gap: 13px; }
+.ios-steps li { display: flex; align-items: center; gap: 12px; font-size: 14px; font-weight: 600; line-height: 1.35; }
+.ios-step-num {
+  flex: none; width: 26px; height: 26px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--accent-soft); color: var(--accent);
+  font-size: 13px; font-weight: 800;
+}
+
+/* анимации */
+.seg-thumb, .nav-pill { transition: transform .42s cubic-bezier(.34, 1.56, .64, 1), width .42s cubic-bezier(.34, 1.56, .64, 1); }
+#toast { transition: opacity .28s ease, transform .38s cubic-bezier(.34, 1.56, .64, 1); }
+.sheet { transition: transform .42s cubic-bezier(.32, .72, 0, 1), opacity .3s ease; }
+.chart-box canvas { cursor: crosshair; }
+.amount-input, .value { font-variant-numeric: tabular-nums; }

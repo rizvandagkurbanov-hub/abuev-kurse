@@ -122,6 +122,14 @@ function formatTime(ts, lang) {
   } catch (e) { return new Date(ts).toLocaleTimeString(); }
 }
 
+/* "2026-11-17" → "17 нояб. 2026" на языке интерфейса */
+function formatDateISO(iso, lang) {
+  try {
+    var d = new Date(iso + "T00:00:00");
+    return new Intl.DateTimeFormat(LOCALES[lang] || "en-US", { day: "numeric", month: "short", year: "numeric" }).format(d);
+  } catch (e) { return iso; }
+}
+
 /* ---------- буфер обмена ---------- */
 function copyText(text) {
   if (navigator.clipboard && window.isSecureContext) {

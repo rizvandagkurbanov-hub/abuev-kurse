@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 
 <title>Abuev — конвертер валют и криптовалют</title>
-<meta name="description" content="Abuev — быстрый конвертер валют и криптовалют: актуальные курсы к рублю, история изменения, избранное и 10 языков интерфейса. Работает офлайн.">
+<meta name="description" content="Abuev — быстрый конвертер валют и криптовалют: актуальные курсы к рублю, цена монет, история изменения, избранное и 10 языков. Работает офлайн.">
 <meta name="theme-color" content="#f4f6fb">
 <meta name="color-scheme" content="light dark">
 
@@ -13,26 +13,32 @@
 <link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="./icons/favicon-16.png">
 <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Abuev">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="mobile-web-app-capable" content="yes">
 
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Abuev">
 <meta property="og:title" content="Abuev — конвертер валют и криптовалют">
-<meta property="og:description" content="Актуальные курсы к рублю, история изменения, избранное, 10 языков. Работает офлайн.">
+<meta property="og:description" content="Актуальные курсы к рублю, цена монет, история изменения, избранное, 10 языков. Работает офлайн.">
 <meta property="og:image" content="https://rizvandagkurbanov-hub.github.io/abuev-kurse/icons/icon-512.png">
 <meta property="og:url" content="https://rizvandagkurbanov-hub.github.io/abuev-kurse/">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Abuev — конвертер валют и криптовалют">
-<meta name="twitter:description" content="Актуальные курсы к рублю, история изменения, избранное, 10 языков.">
+<meta name="twitter:description" content="Актуальные курсы к рублю, цена монет, история изменения, избранное, 10 языков.">
 <meta name="twitter:image" content="https://rizvandagkurbanov-hub.github.io/abuev-kurse/icons/icon-512.png">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"></noscript>
 <link rel="stylesheet" href="./style.css">
+
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebApplication","name":"Abuev — конвертер валют и криптовалют","url":"https://rizvandagkurbanov-hub.github.io/abuev-kurse/","applicationCategory":"FinanceApplication","operatingSystem":"Any","offers":{"@type":"Offer","price":"0","priceCurrency":"RUB"}}
+</script>
 </head>
 <body>
 
@@ -82,11 +88,14 @@
       </div>
       <div class="amount-row">
         <input id="amt" class="amount-input" type="text" inputmode="decimal" autocomplete="off"
+               autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done"
                placeholder="0" value="1" aria-label="Сумма">
-        <button class="swap-btn" id="swapBtn" type="button" title="← / →" aria-label="Поменять валюту">
+        <button class="swap-btn" id="swapBtn" type="button" aria-label="Поменять валюту">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10 4 7l3-3"></path><path d="M4 7h13"></path><path d="m17 14 3 3-3 3"></path><path d="M20 17H7"></path></svg>
         </button>
       </div>
+
+      <div class="quick-row" id="quickRow" aria-label="Быстрая сумма"></div>
 
       <div class="tabs-wrapper" id="tabsWrapper">
         <div class="tabs-inner"><div class="tabs" id="tabs"></div></div>
@@ -105,9 +114,15 @@
         <button class="seg-btn" type="button" role="tab" aria-selected="false" data-view="crypto" data-i18n="tab_crypto">🪙 Крипта</button>
       </div>
 
+      <p class="crypto-hint" id="cryptoHint" hidden>
+        <span class="live-dot"></span>
+        <span data-i18n="crypto_hint">Цены за 1 монету в рублях</span>
+        <span class="live-badge" id="cryptoLive" data-i18n="crypto_live">онлайн</span>
+      </p>
+
       <div class="search">
         <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
-        <input id="searchInput" class="search-input" type="search" autocomplete="off"
+        <input id="searchInput" class="search-input" type="search" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
                data-i18n-ph="search_ph" placeholder="Поиск: USD, евро, биткоин…" aria-label="Поиск валюты">
         <button class="clear-btn" id="clearSearch" type="button" hidden aria-label="Очистить поиск">×</button>
       </div>
@@ -125,26 +140,25 @@
       <p class="muted" data-i18n="rates_subtitle">Курсы к рублю — можно править вручную</p>
     </div>
 
+    <div class="rates-actions top">
+      <button class="btn primary" id="updateBtn" type="button">
+        <span class="spinner" id="btnSpinner" hidden></span>
+        <span id="btnText" data-i18n="btn_update">Обновить курсы</span>
+      </button>
+      <button class="btn ghost" id="resetRates" type="button" data-i18n="reset_rates">Сбросить</button>
+    </div>
+
+    <p class="note" id="status" data-i18n="status_loading">Получаю актуальные курсы…</p>
+
     <div class="card rates-card">
       <div class="search">
         <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
-        <input id="ratesSearch" class="search-input" type="search" autocomplete="off"
+        <input id="ratesSearch" class="search-input" type="search" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
                data-i18n-ph="rates_search_ph" placeholder="Поиск валюты…" aria-label="Поиск валюты">
+        <button class="clear-btn" id="clearRatesSearch" type="button" hidden aria-label="Очистить поиск">×</button>
       </div>
 
       <div id="ratesList" class="rates-list"></div>
-
-      <div class="rates-actions">
-        <button class="btn" id="resetRates" type="button">
-          <span data-i18n="reset_rates">Сбросить</span>
-        </button>
-        <button class="btn primary" id="updateBtn" type="button">
-          <span class="spinner" id="btnSpinner" hidden></span>
-          <span id="btnText" data-i18n="btn_update">Обновить курсы</span>
-        </button>
-      </div>
-
-      <p class="note" id="status" data-i18n="status_loading">Получаю актуальные курсы…</p>
       <p class="note small" data-i18n="source_note">Источник: Exchange Rate API · обновляется раз в день</p>
     </div>
   </section>
@@ -195,6 +209,29 @@
   </div>
 </div>
 
+<!-- УСТАНОВКА НА IPHONE -->
+<div class="modal" id="iosModal" aria-hidden="true">
+  <div class="modal-backdrop" data-close="1"></div>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="iosTitle">
+    <div class="sheet-grip" aria-hidden="true"></div>
+    <div class="sheet-head">
+      <div>
+        <h2 id="iosTitle" data-i18n="install_ios_title">Установить на iPhone</h2>
+        <p class="muted" data-i18n="install_ios_hint">Safari не показывает кнопку установки. Добавьте приложение вручную.</p>
+      </div>
+      <button class="icon-btn" id="closeIos" type="button" data-i18n-title="close" title="Закрыть" aria-label="Закрыть">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+      </button>
+    </div>
+    <ol class="ios-steps">
+      <li><span class="ios-step-num">1</span><span data-i18n="install_step1">Нажмите «Поделиться» в нижней панели Safari</span></li>
+      <li><span class="ios-step-num">2</span><span data-i18n="install_step2">Пролистайте и выберите «На экран „Домой“»</span></li>
+      <li><span class="ios-step-num">3</span><span data-i18n="install_step3">Нажмите «Добавить» — иконка появится на рабочем столе</span></li>
+    </ol>
+    <button class="btn primary wide" id="iosGotIt" type="button" data-i18n="got_it">Понятно</button>
+  </div>
+</div>
+
 <div id="toast" role="status" aria-live="polite"></div>
 
 <script src="./lang.js"></script>
@@ -203,7 +240,6 @@
 <script src="./animations.js"></script>
 <script src="./app.js"></script>
 <script>
-  // Сплэш убираем сразу после загрузки — не ждём сеть
   window.addEventListener("load", function () {
     var splash = document.getElementById("splash");
     if (splash) {
@@ -214,7 +250,7 @@
   setTimeout(function () {
     var splash = document.getElementById("splash");
     if (splash) splash.classList.add("hide");
-  }, 1200);
+  }, 1500);
 </script>
 </body>
 </html>

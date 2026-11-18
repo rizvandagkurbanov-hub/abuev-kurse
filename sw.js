@@ -2,7 +2,7 @@
    ВАЖНО: после каждого обновления файлов меняйте VERSION (например, v3, v4),
    иначе браузер может показывать старую версию из кэша. */
 
-const VERSION = "abuev-v2";
+const VERSION = "abuev-v3";
 const ASSETS = [
   "./",
   "./index.html",
